@@ -1,33 +1,41 @@
 #include "PluginProcessor.h"
+#include "Types.h"
 #include "PluginEditor.h"
 
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p)
-{
-    juce::ignoreUnused (processorRef);
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
-    setSize (400, 300);
+Editor::Editor(Humanizer& p)
+		: AudioProcessorEditor (&p),
+		processorRef(p) {
+	setSize(400, 300);
+
+	range.setSliderStyle(Slider::RotaryVerticalDrag);
+	addAndMakeVisible(range);
+
+	attachements.range = std::make_unique<
+		APVTS::SliderAttachment>(
+			processorRef.apvts,
+			"range",
+			range);
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
-{
+Editor::~Editor() {
 }
 
 //==============================================================================
-void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
-{
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+void Editor::paint (Graphics& g) {
+	// (Our component is opaque, so we must completely fill the background with a solid colour)
+	
 
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+	g.fillAll(getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
+
+	g.setColour (Colours::white);
+	g.setFont(15.0f);
+	g.drawFittedText("Hello World!", getLocalBounds(), Justification::centred, 1);
 }
 
-void AudioPluginAudioProcessorEditor::resized()
-{
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+void Editor::resized() {
+	// This is generally where you'll want to lay out the positions of any
+	// subcomponents in your editor..
+	auto area = getLocalBounds().reduced(20);
+    range.setBounds(area.removeFromTop(200));
 }

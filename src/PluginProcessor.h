@@ -1,48 +1,55 @@
 #pragma once
+#include <JuceHeader.h>
 
-#include <juce_audio_processors/juce_audio_processors.h>
+struct Parameters {
+	std::atomic<float> * range;
+};
 
-//==============================================================================
-class AudioPluginAudioProcessor final : public juce::AudioProcessor
-{
+struct Smoothed {
+	SmoothedValue<float> range;
+};
+
+class Humanizer : public AudioProcessor {
 public:
-    //==============================================================================
-    AudioPluginAudioProcessor();
-    ~AudioPluginAudioProcessor() override;
+	Humanizer();
+	~Humanizer() override;
 
-    //==============================================================================
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
+	AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+	//==============================================================================
+	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+	void releaseResources() override;
 
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-    using AudioProcessor::processBlock;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
+	using AudioProcessor::processBlock;
 
-    //==============================================================================
-    juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
+	//==============================================================================
+	AudioProcessorEditor* createEditor() override;
+	bool hasEditor() const override;
+	//==============================================================================
+	const String getName() const override { return JucePlugin_Name; };
 
-    //==============================================================================
-    const juce::String getName() const override;
+	bool acceptsMidi() const override { return false; };
+	bool producesMidi() const override { return false; };
+	bool isMidiEffect() const override { return false; };
+	double getTailLengthSeconds() const override { return 0.0; };
 
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
+	//==============================================================================
+	int getNumPrograms() override { return 1; };
+	int getCurrentProgram() override { return 1; };
+	void setCurrentProgram(int index) override { ignoreUnused(index); };
+	const String getProgramName(int index) override { ignoreUnused (index); return {}; };
+	void changeProgramName(int index, const String& newName) override { ignoreUnused(index, newName); };
 
-    //==============================================================================
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+	//==============================================================================
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
 
-    //==============================================================================
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
-
+	AudioProcessorValueTreeState apvts;
+	Parameters parameters;
+	Smoothed smoothed;
 private:
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Humanizer)
 };
