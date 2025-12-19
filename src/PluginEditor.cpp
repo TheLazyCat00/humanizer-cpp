@@ -7,6 +7,7 @@ Editor::Editor(Humanizer& p)
 		, range(p.apvts, "range")
 		, processorRef(p) {
 	setSize(400, 300);
+	setResizable(true, true);
 
 	addAndMakeVisible(range);
 }

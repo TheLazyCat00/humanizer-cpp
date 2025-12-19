@@ -20,16 +20,17 @@ public:
 
 		editor.setJustification(Justification::centred);
 		editor.setInputRestrictions(0, "0123456789.");
-		editor.setColour(TextEditor::backgroundColourId,
-				   Colours::transparentBlack);
-		editor.setColour(TextEditor::outlineColourId,
-				   Colours::transparentBlack);
+		editor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
+		editor.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
+		editor.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
 
-		// Editor → Slider
 		editor.onReturnKey = [this] { commitEditorValue(); };
 		editor.onFocusLost = [this] { commitEditorValue(); };
 
-		// Slider → Editor
+		slider.onDragStart = [this] {
+			editor.unfocusAllComponents();
+		};
+
 		slider.onValueChange = [this] {
 			editor.setText(
 				String(slider.getValue(), 1),
@@ -38,10 +39,18 @@ public:
 	}
 
 	void resized() override {
-		slider.setBounds(getLocalBounds());
+		auto bounds = getLocalBounds();
+		slider.setBounds(bounds);
 
-		auto textArea = getLocalBounds().withSizeKeepingCentre(50, 20);
+		// Make text area centered and proportional
+		auto textWidth  = bounds.getWidth();   // adjust ratio as needed
+		auto textHeight = bounds.getHeight(); // adjust ratio as needed
+
+		float fontSize = jmin(textWidth, textHeight) * 0.14f;
+		auto textArea = bounds.withSizeKeepingCentre(textWidth * fontSize / 150, textHeight * fontSize / 150);
+
 		editor.setBounds(textArea);
+		editor.applyFontToAllText(FontOptions(fontSize, Font::bold));
 	}
 
 private:

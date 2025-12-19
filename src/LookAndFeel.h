@@ -43,6 +43,11 @@ public:
 
 		g.setColour(Colours::violet);
 		g.strokePath(valueArc, PathStrokeType(3.0f, PathStrokeType::curved, PathStrokeType::rounded));
+
+		g.setColour(Colours::black);
+		auto diameter = radius * 2;
+		auto innerDiameter = diameter * 0.7;
+		g.fillEllipse(centreX - innerDiameter / 2, centreY - innerDiameter / 2, innerDiameter, innerDiameter);
 	}
 
 	Label * createSliderTextBox (Slider& slider) override {
