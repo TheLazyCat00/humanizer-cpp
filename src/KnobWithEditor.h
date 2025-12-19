@@ -79,7 +79,7 @@ public:
 		
 		// 2. Measure the text
 		auto text = editor.getText();
-		int textWidth = font.getStringWidth(text) + 4;
+		int textWidth = font.getStringWidth(text) + 10;
 		int textHeight = font.getHeight();
 
 		editor.applyFontToAllText(font);

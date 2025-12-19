@@ -4,12 +4,14 @@
 //==============================================================================
 Editor::Editor(Humanizer& p)
 		: AudioProcessorEditor (&p)
-		, range(p.apvts, "range", 150, 150)
-		, processorRef(p) {
+		, processorRef(p)
+		, knobs(p.apvts) {
 	setSize(400, 300);
 	setResizable(true, true);
 
-	addAndMakeVisible(range);
+	knobs.forEach([this] (KnobWithEditor& knob) {
+		addAndMakeVisible(knob);
+	});
 }
 
 Editor::~Editor() {
@@ -24,8 +26,19 @@ void Editor::paint (Graphics& g) {
 }
 
 void Editor::resized() {
-	// This is generally where you'll want to lay out the positions of any
-	// subcomponents in your editor..
-	auto area = getLocalBounds();
-    range.setBounds(area);
+    auto area = getLocalBounds().reduced(20);
+
+    FlexBox knobsContainer;
+    knobsContainer.flexDirection = FlexBox::Direction::column;
+    knobsContainer.flexWrap = FlexBox::Wrap::noWrap;
+    knobsContainer.justifyContent = FlexBox::JustifyContent::center;
+    knobsContainer.alignContent = FlexBox::AlignContent::center;
+
+    // Add items by passing the component into the FlexItem constructor
+    // then chain the layout settings (margin, flexGrow, etc.)
+    knobsContainer.items.add(FlexItem(knobs.range).withMargin(5).withFlex(1.0f));
+    knobsContainer.items.add(FlexItem(knobs.center).withMargin(5).withFlex(1.0f));
+    knobsContainer.items.add(FlexItem(knobs.speed).withMargin(5).withFlex(1.0f));
+
+    knobsContainer.performLayout(area);
 }

@@ -10,8 +10,10 @@ Humanizer::Humanizer()
 			* this,
 			nullptr,
 			"PARAMETERS",
-			createParameterLayout())
-		, parameters(apvts, getSampleRate()) {
+			createParameterLayout()) {
+	parameters.forEach([this](Parameter& p) {
+		p.link(apvts, getSampleRate());
+	});
 }
 
 Humanizer::~Humanizer() {
@@ -20,12 +22,14 @@ Humanizer::~Humanizer() {
 AudioProcessorValueTreeState::ParameterLayout Humanizer::createParameterLayout() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
-	params.push_back(std::make_unique<AudioParameterFloat>(
-		ParameterID { "range", 1 },           // ID (must be stable!)
-		"Range",                              // Name
-		NormalisableRange<float>(0.0f, 50.0f),
-		0.0f                                  // Default
-	));
+	parameters.forEach([&params] (Parameter& parameter) {
+		params.push_back(std::make_unique<AudioParameterFloat>(
+			ParameterID { parameter.name, 1 },
+			parameter.name,
+			NormalisableRange<float>(parameter.start, parameter.end),
+			parameter.defaultValue
+		));
+	});
 
 	return { params.begin(), params.end() };
 }
@@ -46,25 +50,23 @@ bool Humanizer::isBusesLayoutSupported (const BusesLayout& layouts) const {
 }
 
 void Humanizer::prepareToPlay(double sampleRate, int) {
-	parameters.forEach([&sampleRate] (Parameter parameter) {
+	parameters.forEach([&sampleRate] (Parameter& parameter) {
 		parameter.smoothed.reset(sampleRate, 0.05);
 	});
 }
 
 void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
-	ignoreUnused(midiMessages);
-
-	parameters.forEach([] (Parameter parameter) {
-		parameter.smoothed.setTargetValue(parameter.parameter->load());
+	parameters.forEach([] (Parameter& p) {
+		if (p.parameter) // Always check for null!
+			p.smoothed.setTargetValue(p.parameter->load());
 	});
 
-	for (int channel = 0; channel < buffer.getNumChannels(); ++ channel) {
-		auto* data = buffer.getWritePointer(channel);
-
-		for (int i = 0; i < buffer.getNumSamples(); ++i)
-		{
-			float currentRange = parameters.range.smoothed.getNextValue();
-			data[i] *= currentRange / 50.0f; // example gain scaling
+	// 2. Audio Loop
+	for (int i = 0; i < buffer.getNumSamples(); ++i) {
+		float currentRange = parameters.range.smoothed.getNextValue();
+		
+		for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+			buffer.getWritePointer(channel)[i] *= (currentRange / 50.0f);
 		}
 	}
 }
@@ -100,7 +102,7 @@ AudioProcessor * JUCE_CALLTYPE createPluginFilter() {
 
 
 void Humanizer::releaseResources() {
-	parameters.forEach([this] (Parameter parameter) {
+	parameters.forEach([this] (Parameter& parameter) {
 		parameter.smoothed.reset(getSampleRate(), 0.05);
 	});
 }

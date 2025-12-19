@@ -2,30 +2,32 @@
 #include <JuceHeader.h>
 #include "Types.h"
 
-class Parameter {
-public:
-	std::atomic<float> * parameter;
+struct Parameter {
+	String name;
+	float start, end, defaultValue;
+	std::atomic<float>* parameter = nullptr; // Initialize to nullptr!
 	SmoothedValue<float> smoothed;
 
-	Parameter(String name, APVTS& apvts, double sampleRate) {
-		parameter = apvts.getRawParameterValue(name);
-		jassert(parameter != nullptr);
+	Parameter(String n, float s, float e, float d) 
+		: name(n), start(s), end(e), defaultValue(d) {}
 
-		smoothed.reset(sampleRate, 0.05);
-		smoothed.setCurrentAndTargetValue(parameter->load());
+	void link(APVTS& apvts, double sampleRate) {
+		parameter = apvts.getRawParameterValue(name);
+		if (parameter) {
+			smoothed.reset(sampleRate, 0.05);
+			smoothed.setCurrentAndTargetValue(parameter->load());
+		}
 	}
 };
 
 struct Parameters {
-	Parameter range;
-	Parameter center;
-	Parameter speed;
+	// Initialize with hardcoded values immediately
+	Parameter range  { "range", 0.0f, 50.0f, 0.0f };
+	Parameter center { "center", 0.0f, 1.0f, 0.5f };
+	Parameter speed  { "speed", 1.0f, 16.0f, 1.0f };
 
-	Parameters(APVTS& apvts, double sampleRate)
-		: range("range", apvts, sampleRate)
-		, center("center", apvts, sampleRate)
-		, speed("speed", apvts, sampleRate) {
-	}
+	// Default constructor is fine now
+	Parameters() {}
 
 	void forEach(std::function<void(Parameter&)> callback) {
 		callback(range);
@@ -72,6 +74,6 @@ public:
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
 
-	AudioProcessorValueTreeState apvts;
 	Parameters parameters;
+	APVTS apvts;
 };
