@@ -22,11 +22,9 @@ class KnobWithEditor : public Component {
 public:
 	int maxWidth, maxHeight;
 
-	KnobWithEditor(AudioProcessorValueTreeState& apvts, const String& paramID, int maxWidth, int maxHeight)
-		: attachment(apvts, paramID, slider) 
-	{
-		if (auto* param = apvts.getParameter(paramID))
-			displayName = param->getName(100);
+	KnobWithEditor(AudioProcessorValueTreeState& apvts, const String& name, int maxWidth, int maxHeight)
+			: attachment(apvts, name, slider) {
+		displayName = name;
 
 		this->maxWidth = maxWidth;
 		this->maxHeight = maxHeight;

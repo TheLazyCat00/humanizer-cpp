@@ -1,40 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "Types.h"
-
-struct Parameter {
-	String name;
-	float start, end, defaultValue;
-	std::atomic<float>* parameter = nullptr; // Initialize to nullptr!
-	SmoothedValue<float> smoothed;
-
-	Parameter(String n, float s, float e, float d) 
-		: name(n), start(s), end(e), defaultValue(d) {}
-
-	void link(APVTS& apvts, double sampleRate) {
-		parameter = apvts.getRawParameterValue(name);
-		if (parameter) {
-			smoothed.reset(sampleRate, 0.05);
-			smoothed.setCurrentAndTargetValue(parameter->load());
-		}
-	}
-};
-
-struct Parameters {
-	// Initialize with hardcoded values immediately
-	Parameter range  { "range", 0.0f, 50.0f, 0.0f };
-	Parameter center { "center", 0.0f, 1.0f, 0.5f };
-	Parameter speed  { "speed", 1.0f, 16.0f, 1.0f };
-
-	// Default constructor is fine now
-	Parameters() {}
-
-	void forEach(std::function<void(Parameter&)> callback) {
-		callback(range);
-		callback(center);
-		callback(speed);
-	}
-};
+#include "Parameters.h"
 
 class Humanizer : public AudioProcessor {
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Humanizer);

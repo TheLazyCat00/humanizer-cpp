@@ -24,10 +24,10 @@ AudioProcessorValueTreeState::ParameterLayout Humanizer::createParameterLayout()
 
 	parameters.forEach([&params] (Parameter& parameter) {
 		params.push_back(std::make_unique<AudioParameterFloat>(
-			ParameterID { parameter.name, 1 },
-			parameter.name,
-			NormalisableRange<float>(parameter.start, parameter.end),
-			parameter.defaultValue
+			ParameterID { parameter.settings.name, 1 },
+			parameter.settings.name,
+			NormalisableRange<float>(parameter.settings.min, parameter.settings.max),
+			parameter.settings.defaultVal
 		));
 	});
 
