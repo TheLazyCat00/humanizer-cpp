@@ -8,8 +8,7 @@ class KnobWithEditor : public Component {
 	void commitEditorValue() {
 		auto v = editor.getText().getDoubleValue();
 		slider.setValue(v, sendNotificationSync);
-		
-		editor.setVisible(false);
+		editor.giveAwayKeyboardFocus();
 		repaint();
 	}
 
@@ -20,16 +19,11 @@ class KnobWithEditor : public Component {
 	String displayName;
 
 public:
-	int maxWidth;
-	int maxHeight;
+	int maxWidth, maxHeight;
 
-	KnobWithEditor(
-			AudioProcessorValueTreeState& apvts,
-			const String& paramID,
-			int maxWidth,
-			int maxHeight)
-	: attachment(apvts, paramID, slider) {
-		
+	KnobWithEditor(AudioProcessorValueTreeState& apvts, const String& paramID, int maxWidth, int maxHeight)
+		: attachment(apvts, paramID, slider) 
+	{
 		if (auto* param = apvts.getParameter(paramID))
 			displayName = param->getName(100);
 
@@ -43,58 +37,66 @@ public:
 		slider.setSliderStyle(Slider::RotaryVerticalDrag);
 		slider.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
 
-		// Listen to the slider because the parent ignores mouse events now!
 		slider.addMouseListener(this, false);
-		editor.addMouseListener(this, false);
 
 		editor.setJustification(Justification::centred);
-		editor.setInputRestrictions(0, "0123456789.");
 		editor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
 		editor.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
 		editor.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
 		editor.setColour(TextEditor::textColourId, Colours::white);
+		
+		editor.setInterceptsMouseClicks(false, false);
 
 		editor.onReturnKey = [this] { commitEditorValue(); };
 		editor.onFocusLost = [this] { commitEditorValue(); };
 
 		editor.setText(String(slider.getValue(), 1), dontSendNotification);
-		editor.setVisible(false);
-
-		slider.onDragStart = [this] {
-			editor.unfocusAllComponents();
-			editor.setVisible(true); 
-		};
+		editor.setAlpha(0.0f); 
 
 		slider.onValueChange = [this] {
 			editor.setText(String(slider.getValue(), 1), dontSendNotification);
 			updateEditorBounds();
-			repaint(); 
+			repaint();
+		};
+		
+		slider.onDragStart = [this] {
+			editor.setCaretVisible(false);
+		};
+
+		slider.onDragEnd = [this] {
+			editor.setCaretVisible(true);
 		};
 
 		addAndMakeVisible(slider);
-		addChildComponent(editor);
+		addAndMakeVisible(editor);
 	}
 
-	void mouseEnter(const MouseEvent& e) override {
-		// (Double check to prevent background firing, though setIntercepts fixes most of it)
-		if (e.eventComponent == &slider || e.eventComponent == &editor) {
-			editor.setVisible(true);
-			repaint();
-		}
+	bool shouldShowValue() const {
+		return slider.isMouseOver() || slider.isMouseButtonDown() || editor.hasKeyboardFocus(true);
 	}
 
-	void mouseExit(const MouseEvent& e) override {
-		if (!(slider.isMouseOver() || editor.isMouseOver()) && !editor.hasKeyboardFocus(true)) {
-			editor.setVisible(false);
-			repaint();
+	void mouseEnter(const MouseEvent&) override { repaint(); }
+	void mouseExit(const MouseEvent&) override { repaint(); }
+	
+	void mouseDown(const MouseEvent& e) override {
+		if (shouldShowValue() && !slider.isMouseButtonDown()) {
+			editor.moveCaretToEndOfLine(false);
+			editor.setInterceptsMouseClicks(true, true);
+			editor.grabKeyboardFocus();
 		}
 	}
 
 	void paintOverChildren(Graphics& g) override {
-		if (!editor.isVisible()) {
-			auto bounds = getModifiedBounds();
-			float fontSize = jmin(bounds.getHeight(), bounds.getWidth()) * 0.17f;
+		auto bounds = getModifiedBounds();
+		bool showValue = shouldShowValue();
 
+		editor.setAlpha(showValue ? 1.0f : 0.0f);
+		
+		bool isTyping = editor.hasKeyboardFocus(true);
+		editor.setInterceptsMouseClicks(isTyping, isTyping);
+
+		if (!showValue) {
+			float fontSize = jmin(bounds.getHeight(), bounds.getWidth()) * 0.17f;
 			g.setColour(Colours::white.withAlpha(0.9f));
 			g.setFont(FontOptions(fontSize).withStyle("Regular"));
 			g.drawText(displayName, bounds, Justification::centred);
@@ -102,24 +104,15 @@ public:
 	}
 
 	Rectangle<int> getModifiedBounds() {
-		auto bounds = getLocalBounds();
-		return bounds.withSizeKeepingCentre(
-			jmin(bounds.getWidth(), maxWidth), 
-			jmin(bounds.getHeight(), maxHeight)
-		);
+		return getLocalBounds().withSizeKeepingCentre(jmin(getWidth(), maxWidth), jmin(getHeight(), maxHeight));
 	}
 
 	void updateEditorBounds() {
 		auto bounds = getModifiedBounds();
-		float fontSize = jmin(bounds.getHeight(), bounds.getWidth()) * 0.2f;
-		Font font = FontOptions(fontSize);
-		
-		auto text = editor.getText();
-		int textWidth = font.getStringWidth(text) + 20;
-		int textHeight = font.getHeight();
-
+		Font font = FontOptions(jmin(bounds.getHeight(), bounds.getWidth()) * 0.2f);
+		int textWidth = font.getStringWidth(editor.getText()) + 20;
 		editor.applyFontToAllText(font);
-		editor.setBounds(bounds.withSizeKeepingCentre(textWidth, textHeight));
+		editor.setBounds(bounds.withSizeKeepingCentre(textWidth, font.getHeight()));
 	}
 
 	void resized() override {
