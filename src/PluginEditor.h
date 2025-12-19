@@ -10,9 +10,9 @@ struct Knobs {
 	KnobWithEditor speed;
 
 	Knobs(APVTS& apvts)
-		: range(apvts, PluginConfig::range.name, 150, 150)
-		, center(apvts, PluginConfig::center.name, 150, 150)
-		, speed(apvts, PluginConfig::speed.name, 150, 150)
+			: range(apvts, PluginConfig::range.name, 120, 120)
+			, center(apvts, PluginConfig::center.name, 120, 120)
+			, speed(apvts, PluginConfig::speed.name, 120, 120)
 		{
 	}
 

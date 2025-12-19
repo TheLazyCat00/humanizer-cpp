@@ -25,7 +25,7 @@ public:
 		float innerRad = radius -(innerStrokeThickness * 0.5f);
 		float outerRad = radius +(innerStrokeThickness * 0.5f);
 
-		Colour outerColor = Colours::white.darker(0.9);
+		Colour outerColor = Colours::white.darker(0.9f);
 		Colour innerColor = Colours::darkgrey.darker(1);
 		ColourGradient outlineGradient(innerColor, centreX, centreY,
 			outerColor, centreX + outerRad, centreY, true);
@@ -47,7 +47,7 @@ public:
 		auto lightDiameter = (radius * 2.0f) * 0.7f;
 		auto lightRadius = lightDiameter / 2;
 		
-		ColourGradient ellipseGradient(Colours::darkgrey.darker(1 - sliderPosProportional * 0.7), centreX, centreY,
+		ColourGradient ellipseGradient(Colours::darkgrey.darker(1.0f - sliderPosProportional * 0.7f), centreX, centreY,
 			Colours::black, centreX + innerRad, centreY, true);
 		g.setGradientFill(ellipseGradient);
 		g.fillEllipse(centreX - lightRadius, centreY - lightRadius, lightDiameter, lightDiameter);

@@ -110,7 +110,7 @@ public:
 		Font font = FontOptions(jmin(bounds.getHeight(), bounds.getWidth()) * 0.2f);
 		int textWidth = font.getStringWidth(editor.getText()) + 20;
 		editor.applyFontToAllText(font);
-		editor.setBounds(bounds.withSizeKeepingCentre(textWidth, font.getHeight()));
+		editor.setBounds(bounds.withSizeKeepingCentre(textWidth, int(font.getHeight())));
 	}
 
 	void resized() override {
