@@ -35,22 +35,29 @@ public:
 			editor.setText(
 				String(slider.getValue(), 1),
 				dontSendNotification);
+			updateEditorBounds();
 		};
 	}
 
-	void resized() override {
+	void updateEditorBounds() {
 		auto bounds = getLocalBounds();
-		slider.setBounds(bounds);
+		
+		float fontSize = jmin(bounds.getHeight(), bounds.getWidth()) * 0.14f;
+		Font font = FontOptions(fontSize, Font::bold);
+		
+		// 2. Measure the text
+		auto text = editor.getText();
+		int textWidth = font.getStringWidth(text) + 4;
+		int textHeight = font.getHeight();
 
-		// Make text area centered and proportional
-		auto textWidth  = bounds.getWidth();   // adjust ratio as needed
-		auto textHeight = bounds.getHeight(); // adjust ratio as needed
+		editor.applyFontToAllText(font);
 
-		float fontSize = jmin(textWidth, textHeight) * 0.14f;
-		auto textArea = bounds.withSizeKeepingCentre(textWidth * fontSize / 150, textHeight * fontSize / 150);
+		editor.setBounds(bounds.withSizeKeepingCentre(textWidth, textHeight));
+	}
 
-		editor.setBounds(textArea);
-		editor.applyFontToAllText(FontOptions(fontSize, Font::bold));
+	void resized() override {
+		slider.setBounds(getLocalBounds());
+		updateEditorBounds();
 	}
 
 private:
