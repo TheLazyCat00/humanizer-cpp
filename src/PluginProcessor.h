@@ -1,15 +1,41 @@
 #pragma once
 #include <JuceHeader.h>
+#include "Types.h"
 
-struct Parameters {
-	std::atomic<float> * range;
+class Parameter {
+public:
+	std::atomic<float> * parameter;
+	SmoothedValue<float> smoothed;
+
+	Parameter(String name, APVTS& apvts, double sampleRate) {
+		parameter = apvts.getRawParameterValue(name);
+		jassert(parameter != nullptr);
+
+		smoothed.reset(sampleRate, 0.05);
+		smoothed.setCurrentAndTargetValue(parameter->load());
+	}
 };
 
-struct Smoothed {
-	SmoothedValue<float> range;
+struct Parameters {
+	Parameter range;
+	Parameter center;
+	Parameter speed;
+
+	Parameters(APVTS& apvts, double sampleRate)
+		: range("range", apvts, sampleRate)
+		, center("center", apvts, sampleRate)
+		, speed("speed", apvts, sampleRate) {
+	}
+
+	void forEach(std::function<void(Parameter&)> callback) {
+		callback(range);
+		callback(center);
+		callback(speed);
+	}
 };
 
 class Humanizer : public AudioProcessor {
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Humanizer);
 public:
 	Humanizer();
 	~Humanizer() override;
@@ -48,8 +74,4 @@ public:
 
 	AudioProcessorValueTreeState apvts;
 	Parameters parameters;
-	Smoothed smoothed;
-private:
-	//==============================================================================
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Humanizer)
 };

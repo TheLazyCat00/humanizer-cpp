@@ -5,18 +5,13 @@
 Humanizer::Humanizer()
 		: AudioProcessor (BusesProperties()
 			.withInput("Input", AudioChannelSet::stereo(), true)
-			.withOutput ("Output", AudioChannelSet::stereo(), true)),
-		apvts(
+			.withOutput ("Output", AudioChannelSet::stereo(), true))
+		, apvts(
 			* this,
 			nullptr,
 			"PARAMETERS",
-			createParameterLayout()
-		) {
-    parameters.range = apvts.getRawParameterValue("range");
-	jassert(parameters.range != nullptr);
-
-	smoothed.range.reset(getSampleRate(), 0.05); // 50 ms smoothing
-	smoothed.range.setCurrentAndTargetValue(parameters.range->load());
+			createParameterLayout())
+		, parameters(apvts, getSampleRate()) {
 }
 
 Humanizer::~Humanizer() {
@@ -51,20 +46,24 @@ bool Humanizer::isBusesLayoutSupported (const BusesLayout& layouts) const {
 }
 
 void Humanizer::prepareToPlay(double sampleRate, int) {
-	smoothed.range.reset(sampleRate, 0.05);
+	parameters.forEach([&sampleRate] (Parameter parameter) {
+		parameter.smoothed.reset(sampleRate, 0.05);
+	});
 }
 
 void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ignoreUnused(midiMessages);
 
-	smoothed.range.setTargetValue(parameters.range->load());
+	parameters.forEach([] (Parameter parameter) {
+		parameter.smoothed.setTargetValue(parameter.parameter->load());
+	});
 
 	for (int channel = 0; channel < buffer.getNumChannels(); ++ channel) {
 		auto* data = buffer.getWritePointer(channel);
 
 		for (int i = 0; i < buffer.getNumSamples(); ++i)
 		{
-			float currentRange = smoothed.range.getNextValue();
+			float currentRange = parameters.range.smoothed.getNextValue();
 			data[i] *= currentRange / 50.0f; // example gain scaling
 		}
 	}
@@ -101,5 +100,7 @@ AudioProcessor * JUCE_CALLTYPE createPluginFilter() {
 
 
 void Humanizer::releaseResources() {
-	smoothed.range.reset(getSampleRate(), 0.05);
+	parameters.forEach([this] (Parameter parameter) {
+		parameter.smoothed.reset(getSampleRate(), 0.05);
+	});
 }

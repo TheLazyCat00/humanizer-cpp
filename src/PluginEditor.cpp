@@ -4,7 +4,7 @@
 //==============================================================================
 Editor::Editor(Humanizer& p)
 		: AudioProcessorEditor (&p)
-		, range(p.apvts, "range")
+		, range(p.apvts, "range", 150, 150)
 		, processorRef(p) {
 	setSize(400, 300);
 	setResizable(true, true);
@@ -26,6 +26,6 @@ void Editor::paint (Graphics& g) {
 void Editor::resized() {
 	// This is generally where you'll want to lay out the positions of any
 	// subcomponents in your editor..
-	auto area = getLocalBounds().reduced(20);
-    range.setBounds(area.removeFromTop(200));
+	auto area = getLocalBounds();
+    range.setBounds(area);
 }
