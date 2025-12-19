@@ -3,51 +3,54 @@
 
 class ModernLookAndFeel : public LookAndFeel_V4 {
 public:
+	ModernLookAndFeel() {
+		setColour(ResizableWindow::backgroundColourId, Colours::black);
+	}
+
 	void drawRotarySlider(
 			Graphics& g, int x, int y, int width, int height,
 			float sliderPosProportional, float rotaryStartAngle,
 			float rotaryEndAngle, Slider& slider) override {
 		auto radius = jmin(width / 2, height / 2) - 4.0f;
-		auto centreX = x + width / 2;
-		auto centreY = y + height / 2;
-		auto angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
-
-		int numSegments = 100;
+		auto centreX = x + width / 2.0f;
+		auto centreY = y + height / 2.0f;
+		auto angle = rotaryStartAngle + sliderPosProportional *(rotaryEndAngle - rotaryStartAngle);
+		float innerStrokeThickness = radius * 0.15f;
+		float outerStrokeThickness = radius * 0.15f;
 
 		Path backgroundArc;
-		for (int i = 0; i <= numSegments; ++ i) {
-			float t = i / (float) numSegments;
-			float a = rotaryStartAngle + t * (rotaryEndAngle - rotaryStartAngle);
-			float px = centreX + radius * std::cos(a - MathConstants<float>::halfPi);
-			float py = centreY + radius * std::sin(a - MathConstants<float>::halfPi);
-			if (i == 0)
-				backgroundArc.startNewSubPath(px, py);
-			else
-				backgroundArc.lineTo(px, py);
-		}
+		backgroundArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, 
+			rotaryStartAngle, rotaryEndAngle, true);
 
-		g.setColour(Colours::grey);
-		g.strokePath(backgroundArc, PathStrokeType(3.0f, PathStrokeType::curved, PathStrokeType::rounded));
+		float innerRad = radius -(innerStrokeThickness * 0.5f);
+		float outerRad = radius +(innerStrokeThickness * 0.5f);
 
+		Colour outerColor = Colours::white.darker(0.9);
+		Colour innerColor = Colours::darkgrey.darker(1);
+		ColourGradient outlineGradient(innerColor, centreX, centreY,
+			outerColor, centreX + outerRad, centreY, true);
+
+		float stopPosition = innerRad / outerRad;
+		outlineGradient.addColour(stopPosition, innerColor);
+
+		g.setGradientFill(outlineGradient);
+		g.strokePath(backgroundArc, PathStrokeType(outerStrokeThickness, PathStrokeType::curved, PathStrokeType::rounded));
+
+		float innerStrokeRadius = radius -(outerStrokeThickness - innerStrokeThickness) / 2;
 		Path valueArc;
-		for (int i = 0; i <= numSegments; ++ i) {
-			float t = i / (float) numSegments;
-			float a = rotaryStartAngle + t * (angle - rotaryStartAngle);
-			float px = centreX + radius * std::cos(a - MathConstants<float>::halfPi);
-			float py = centreY + radius * std::sin(a - MathConstants<float>::halfPi);
-			if (i == 0)
-				valueArc.startNewSubPath(px, py);
-			else
-				valueArc.lineTo(px, py);
-		}
+		valueArc.addCentredArc(centreX, centreY, innerStrokeRadius, innerStrokeRadius, 0.0f,
+			rotaryStartAngle, angle, true);
 
-		g.setColour(Colours::violet);
-		g.strokePath(valueArc, PathStrokeType(3.0f, PathStrokeType::curved, PathStrokeType::rounded));
+		g.setColour(Colours::purple);
+		g.strokePath(valueArc, PathStrokeType(innerStrokeThickness, PathStrokeType::curved, PathStrokeType::rounded));
 
-		g.setColour(Colours::black);
-		auto diameter = radius * 2;
-		auto innerDiameter = diameter * 0.7;
-		g.fillEllipse(centreX - innerDiameter / 2, centreY - innerDiameter / 2, innerDiameter, innerDiameter);
+		auto lightDiameter = (radius * 2.0f) * 0.7f;
+		auto lightRadius = lightDiameter / 2;
+		
+		ColourGradient ellipseGradient(Colours::darkgrey.darker(1 - sliderPosProportional * 0.7), centreX, centreY,
+			Colours::black, centreX + innerRad, centreY, true);
+		g.setGradientFill(ellipseGradient);
+		g.fillEllipse(centreX - lightRadius, centreY - lightRadius, lightDiameter, lightDiameter);
 	}
 
 	Label * createSliderTextBox (Slider& slider) override {

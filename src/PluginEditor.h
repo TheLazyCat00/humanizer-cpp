@@ -2,7 +2,6 @@
 
 #include "KnobWithEditor.h"
 #include "PluginProcessor.h"
-#include "LookAndFeel.h"
 #include "Types.h"
 
 struct Knobs {
@@ -29,7 +28,7 @@ class Editor final : public AudioProcessorEditor {
 	// This reference is provided as a quick way for your editor to
 	// access the processor object that created it.
 	Humanizer& processorRef;
-	std::unique_ptr<ModernLookAndFeel> modernLook;
+	ModernLookAndFeel modernLook;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Editor)
 public:

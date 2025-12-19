@@ -18,7 +18,7 @@ namespace PluginConfig {
 
 struct Parameter {
 	ParameterSettings settings;
-	std::atomic<float>* parameter = nullptr; // Initialize to nullptr!
+	std::atomic<float>* parameter = nullptr;
 	SmoothedValue<float> smoothed;
 
 	Parameter(ParameterSettings parameterSettings)
