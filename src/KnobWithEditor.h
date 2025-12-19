@@ -17,6 +17,7 @@ class KnobWithEditor : public Component {
 	TextEditor editor;
 	APVTS::SliderAttachment attachment;
 	String displayName;
+	bool dragging = false;
 
 public:
 	int maxWidth, maxHeight;
@@ -30,14 +31,10 @@ public:
 		this->maxWidth = maxWidth;
 		this->maxHeight = maxHeight;
 
-		setInterceptsMouseClicks(false, true);
-
 		lookAndFeel = std::make_unique<ModernLookAndFeel>();
 		slider.setLookAndFeel(lookAndFeel.get());
 		slider.setSliderStyle(Slider::RotaryVerticalDrag);
 		slider.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
-
-		slider.addMouseListener(this, false);
 
 		editor.setJustification(Justification::centred);
 		editor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
@@ -45,7 +42,8 @@ public:
 		editor.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
 		editor.setColour(TextEditor::textColourId, Colours::white);
 		
-		editor.setInterceptsMouseClicks(false, false);
+		setInterceptsMouseClicks(false, true);
+		editor.setInterceptsMouseClicks(true, true);
 
 		editor.onReturnKey = [this] { commitEditorValue(); };
 		editor.onFocusLost = [this] { commitEditorValue(); };
@@ -55,16 +53,18 @@ public:
 
 		slider.onValueChange = [this] {
 			editor.setText(String(slider.getValue(), 1), dontSendNotification);
+
 			updateEditorBounds();
 			repaint();
 		};
-		
+
 		slider.onDragStart = [this] {
-			editor.setCaretVisible(false);
+			resetEditor();
+			dragging = true;
 		};
 
 		slider.onDragEnd = [this] {
-			editor.setCaretVisible(true);
+			dragging = false;
 		};
 
 		addAndMakeVisible(slider);
@@ -72,30 +72,26 @@ public:
 	}
 
 	bool shouldShowValue() const {
-		return slider.isMouseOver() || slider.isMouseButtonDown() || editor.hasKeyboardFocus(true);
+		return slider.isMouseOver() || editor.isMouseOver() || dragging;
+	}
+
+	void resetEditor() {
+		editor.giveAwayKeyboardFocus();
+		editor.moveCaretToEndOfLine(false);
 	}
 
 	void mouseEnter(const MouseEvent&) override { repaint(); }
 	void mouseExit(const MouseEvent&) override { repaint(); }
 	
-	void mouseDown(const MouseEvent& e) override {
-		if (shouldShowValue() && !slider.isMouseButtonDown()) {
-			editor.moveCaretToEndOfLine(false);
-			editor.setInterceptsMouseClicks(true, true);
-			editor.grabKeyboardFocus();
-		}
-	}
-
 	void paintOverChildren(Graphics& g) override {
 		auto bounds = getModifiedBounds();
 		bool showValue = shouldShowValue();
 
 		editor.setAlpha(showValue ? 1.0f : 0.0f);
-		
-		bool isTyping = editor.hasKeyboardFocus(true);
-		editor.setInterceptsMouseClicks(isTyping, isTyping);
 
 		if (!showValue) {
+			resetEditor();
+
 			float fontSize = jmin(bounds.getHeight(), bounds.getWidth()) * 0.17f;
 			g.setColour(Colours::white.withAlpha(0.9f));
 			g.setFont(FontOptions(fontSize).withStyle("Regular"));
@@ -104,7 +100,11 @@ public:
 	}
 
 	Rectangle<int> getModifiedBounds() {
-		return getLocalBounds().withSizeKeepingCentre(jmin(getWidth(), maxWidth), jmin(getHeight(), maxHeight));
+		auto minWidth = jmin(getWidth(), maxWidth);
+		auto minHeight = jmin(getHeight(), maxHeight);
+
+		auto minLength = jmin(minWidth, minHeight);
+		return getLocalBounds().withSizeKeepingCentre(minLength, minLength);
 	}
 
 	void updateEditorBounds() {
