@@ -11,9 +11,10 @@ struct ParameterSettings {
 };
 
 namespace PluginConfig {
-	static const ParameterSettings range { "Range", 0.0f, 50.0f, 0.0f };
-	static const ParameterSettings center { "Center", 0.0f, 1.0f,  0.5f };
+	static const ParameterSettings range { "Range", 0.0f, 200.0f, 0.0f };
+	static const ParameterSettings center { "Center", -1.0f, 1.0f, 0.0f };
 	static const ParameterSettings speed { "Speed",  1.0f, 16.0f, 1.0f };
+	static const float ramptime = 0.05;
 }
 
 struct Parameter {

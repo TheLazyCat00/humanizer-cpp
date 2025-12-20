@@ -25,7 +25,7 @@ struct Knobs {
 };
 
 //==============================================================================
-class Editor final : public AudioProcessorEditor {
+class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorValueTreeState::Listener {
 	// This reference is provided as a quick way for your editor to
 	// access the processor object that created it.
 	Humanizer& processorRef;
@@ -39,6 +39,9 @@ public:
 	//==============================================================================
 	void paint (Graphics&) override;
 	void resized() override;
+	void timerCallback() override;
 	Knobs knobs;
 	DiagramComponent diagram;
+	void parameterChanged (const juce::String& parameterID, float newValue) override;
+    void updateDiagramLimits();
 };
