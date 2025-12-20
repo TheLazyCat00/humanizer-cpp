@@ -2,8 +2,8 @@
 #include <JuceHeader.h>
 
 namespace ModernTheme {
-	static const Colour mainAccent = Colours::purple;
-	static const Colour background = Colour(0xFF121212);
+	static const Colour& mainAccent = Colours::purple;
+	static const Colour& background = Colour(0xFF121212);
 }
 
 class ModernLookAndFeel : public LookAndFeel_V4 {
@@ -28,8 +28,8 @@ public:
 		backgroundArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, 
 			rotaryStartAngle, rotaryEndAngle, true);
 
-		float innerRad = radius -(innerStrokeThickness * 0.5f);
-		float outerRad = radius +(innerStrokeThickness * 0.5f);
+		float innerRad = radius - (innerStrokeThickness * 0.5f);
+		float outerRad = radius + (innerStrokeThickness * 0.5f);
 
 		Colour outerColor = Colours::white.darker(0.9f);
 		Colour innerColor = Colours::darkgrey.darker(1);
@@ -50,7 +50,7 @@ public:
 		g.setColour(ModernTheme::mainAccent);
 		g.strokePath(valueArc, PathStrokeType(innerStrokeThickness, PathStrokeType::curved, PathStrokeType::rounded));
 
-		auto lightDiameter =(radius * 2.0f) * 0.7f;
+		auto lightDiameter = (radius * 2.0f) * 0.7f;
 		auto lightRadius = lightDiameter / 2;
 		
 		ColourGradient ellipseGradient(Colours::darkgrey.darker(1.0f - sliderPosProportional * 0.7f), centreX, centreY,
