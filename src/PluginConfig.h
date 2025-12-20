@@ -28,7 +28,7 @@ struct Parameter {
 	void link(APVTS& apvts, double sampleRate) {
 		parameter = apvts.getRawParameterValue(settings.name);
 		if (parameter) {
-			smoothed.reset(sampleRate, 0.05);
+			smoothed.reset(sampleRate, PluginConfig::ramptime);
 			smoothed.setCurrentAndTargetValue(parameter->load());
 		}
 	}

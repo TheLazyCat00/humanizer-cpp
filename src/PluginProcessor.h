@@ -69,7 +69,7 @@ public:
 };
 
 inline float Perlin::getSmoothNoise(float x) {
-	float shiftedX = x + uniqueSeed; 
+	float shiftedX = x + uniqueSeed;
 	int x0 = static_cast<int>(shiftedX);
 	int x1 = x0 + 1;
 	float frac = shiftedX - static_cast<float>(x0);
@@ -84,15 +84,40 @@ inline float Perlin::getSmoothNoise(float x) {
 }
 
 inline float Perlin::getNormalized(double bpm, double sampleRate) {
-	float speed = humanizer.parameters.speed.smoothed.getNextValue();
-	
-	double beatsPerSecond = (bpm / 60.0) * speed;
-	double samplesPerBeat = sampleRate / beatsPerSecond;
-	
-	currentPhase += (1.0 / samplesPerBeat);
-	if (currentPhase > 1000.0) currentPhase -= 1000.0;
+    float speedBeats = humanizer.parameters.speed.smoothed.getNextValue();
+    double beatsPerSecond = bpm / 60.0;
+    double frequencyHz = beatsPerSecond / std::max(0.1f, speedBeats);
 
-	return getSmoothNoise(currentPhase);
+    // 1. Advance the Master Phase
+    currentPhase += frequencyHz / sampleRate;
+    if (currentPhase > 1.0) currentPhase -= 1.0;
+
+    // 2. Slow "Amplitude Evolution"
+    // We want the 'mix' of these sines to change slowly over time
+    // so the pattern never feels like a loop.
+    amplitudePhase += 0.1 / sampleRate; // Very slow drift
+    if (amplitudePhase > 1.0) amplitudePhase -= 1.0;
+
+    const float twoPi = juce::MathConstants<float>::twoPi;
+
+    // 3. Create the sines with shifting weights
+    // We use slow LFOs (or just more sines) to modulate the amplitudes
+    float amp1 = std::sin(twoPi * amplitudePhase * 0.13f) * 0.5f + 0.5f; // Rises/falls over seconds
+    float amp2 = std::sin(twoPi * amplitudePhase * 0.27f) * 0.3f + 0.3f;
+    float amp3 = std::sin(twoPi * amplitudePhase * 0.41f) * 0.2f + 0.2f;
+
+    // Ratio 1 (The Main Sway)
+    float val = std::sin(twoPi * currentPhase) * amp1;
+    
+    // Ratio 2 (The Double-time Jitter)
+    val += std::sin(twoPi * currentPhase * 2.0f) * amp2;
+    
+    // Ratio 0.5 (The Long-form Drift)
+    val += std::sin(twoPi * currentPhase * 0.5f) * amp3;
+
+    // 4. Final Normalization
+    // Sum of max possible amplitudes is approx 1.0 + 0.6 + 0.4 = 2.0
+    return val * 0.5f; 
 }
 
 inline double Perlin::getValue(double bpm, double sampleRate) {

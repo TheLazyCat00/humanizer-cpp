@@ -10,6 +10,8 @@ Editor::Editor(Humanizer& p)
 	setResizable(true, true);
 	setLookAndFeel(&modernLook);
 
+	processorRef.apvts.addParameterListener(PluginConfig::range.name, this);
+    processorRef.apvts.addParameterListener(PluginConfig::center.name, this);
 	addAndMakeVisible(diagram);
 	knobs.forEach([this] (KnobWithEditor& knob) {
 		addAndMakeVisible(knob);
@@ -53,7 +55,8 @@ void Editor::timerCallback() {
 	float val = processorRef.currentNoiseForDisplay.load();
 
 	diagram.shift(val);
-	diagram.updateSmoothing(); 
+	diagram.updateSmoothing();
+	diagram.repaint();
 }
 
 void Editor::parameterChanged(const String& parameterID, float newValue) {
@@ -66,8 +69,9 @@ void Editor::updateDiagramLimits() {
 	float r = processorRef.parameters.range.parameter->load();
 	float c = processorRef.parameters.center.parameter->load();
 
-	float theoreticalMax = c + (r * 0.5f);
-	float theoreticalMin = c - (r * 0.5f);
+
+	float theoreticalMax = 0.5 * r * (c + 1);
+	float theoreticalMin = 0.5 * r * (c - 1);
 
 	float padding = r * 0.1f;
 
