@@ -1,10 +1,16 @@
 #pragma once
 #include <JuceHeader.h>
 
+namespace ModernTheme {
+	static const Colour mainAccent = Colours::purple;
+	static const Colour background = Colour(0xFF121212);
+}
+
 class ModernLookAndFeel : public LookAndFeel_V4 {
 public:
 	ModernLookAndFeel() {
-		setColour(ResizableWindow::backgroundColourId, Colours::black);
+		setColour(ResizableWindow::backgroundColourId, ModernTheme::background);
+		setColour(Label::textColourId, Colours::white);
 	}
 
 	void drawRotarySlider(
@@ -41,10 +47,10 @@ public:
 		valueArc.addCentredArc(centreX, centreY, innerStrokeRadius, innerStrokeRadius, 0.0f,
 			rotaryStartAngle, angle, true);
 
-		g.setColour(Colours::purple);
+		g.setColour(ModernTheme::mainAccent);
 		g.strokePath(valueArc, PathStrokeType(innerStrokeThickness, PathStrokeType::curved, PathStrokeType::rounded));
 
-		auto lightDiameter = (radius * 2.0f) * 0.7f;
+		auto lightDiameter =(radius * 2.0f) * 0.7f;
 		auto lightRadius = lightDiameter / 2;
 		
 		ColourGradient ellipseGradient(Colours::darkgrey.darker(1.0f - sliderPosProportional * 0.7f), centreX, centreY,
@@ -53,7 +59,7 @@ public:
 		g.fillEllipse(centreX - lightRadius, centreY - lightRadius, lightDiameter, lightDiameter);
 	}
 
-	Label * createSliderTextBox (Slider& slider) override {
+	Label * createSliderTextBox(Slider& slider) override {
 		auto* label = LookAndFeel_V4::createSliderTextBox(slider);
 
 		label->setJustificationType(Justification::centred);

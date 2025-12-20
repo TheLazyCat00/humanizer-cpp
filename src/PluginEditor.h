@@ -1,6 +1,7 @@
 #pragma once
 
 #include "KnobWithEditor.h"
+#include "Diagram.h"
 #include "PluginProcessor.h"
 #include "Types.h"
 
@@ -39,4 +40,5 @@ public:
 	void paint (Graphics&) override;
 	void resized() override;
 	Knobs knobs;
+	DiagramComponent diagram;
 };
