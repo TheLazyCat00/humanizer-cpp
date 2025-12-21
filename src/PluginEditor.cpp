@@ -7,7 +7,7 @@ Editor::Editor(Humanizer& p)
 		, processorRef(p)
 		, knobs(p.apvts)
 		, diagram(- PluginConfig::range.min, PluginConfig::range.max) {
-	openGLContext.attachTo(*this);
+	openGLContext.attachTo(* this);
 	setSize(600, 400);
 	setResizable(true, true);
 	setLookAndFeel(&modernLook);
@@ -18,8 +18,6 @@ Editor::Editor(Humanizer& p)
 	knobs.forEach([this] (KnobWithEditor& knob) {
 		addAndMakeVisible(knob);
 	});
-
-	updateDiagramLimits();
 
 	startTimerHz(60);
 }
@@ -54,19 +52,20 @@ void Editor::resized() {
 }
 
 void Editor::timerCallback() {
-	if (!isShowing()) 
-        return;
-	float val = processorRef.currentNoiseForDisplay.load();
+	if (!isShowing()) return;
 
+	// Handle updates 60 times a second, instead of 1000 times a second
+	if (limitsDirty.exchange(false)) {
+		updateDiagramLimits();
+	}
+
+	float val = processorRef.currentNoiseForDisplay.load();
 	diagram.shift(val);
-	diagram.updateSmoothing();
 	diagram.repaint();
 }
 
 void Editor::parameterChanged(const String& parameterID, float newValue) {
-	MessageManager::callAsync([this]() {
-		updateDiagramLimits();
-	});
+	limitsDirty = true;
 }
 
 void Editor::updateDiagramLimits() {

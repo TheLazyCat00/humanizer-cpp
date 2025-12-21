@@ -60,26 +60,37 @@ double Humanizer::getRequiredLatencyMs() const {
 }
 
 void Humanizer::prepareToPlay(double sampleRate, int samplesPerBlock) {
-	parameters.forEach([&sampleRate] (Parameter& parameter) {
-		parameter.smoothed.reset(sampleRate, PluginConfig::ramptime);
-	});
+    parameters.forEach([&sampleRate] (Parameter& parameter) {
+        parameter.smoothed.reset(sampleRate, PluginConfig::ramptime);
+    });
 
-	double latencyMs = getRequiredLatencyMs();
-	int latencySamples = static_cast<int>((latencyMs / 1000.0) * sampleRate);
+    // 1. Calculate the Worst Case Latency (Max Range + Min Center)
+    // We use the STATIC config limits, not the current parameter value.
+    float maxPossibleRange = PluginConfig::range.max; 
+    
+    // Calculate max latency compensation needed if center was at 0.0
+    // formula: -range * 0.5 * (center - 1.0) -> maxes out when center is 0
+    float maxLatencyMs = maxPossibleRange * 0.5f; 
 
-	setLatencySamples(latencySamples);
+    int latencySamples = static_cast<int>((maxLatencyMs / 1000.0) * sampleRate);
+    setLatencySamples(latencySamples);
 
-	dsp::ProcessSpec spec {
-		sampleRate,
-		static_cast<uint32>(samplesPerBlock),
-		static_cast<uint32>(getTotalNumOutputChannels()),
-	};
+    dsp::ProcessSpec spec {
+        sampleRate,
+        static_cast<uint32>(samplesPerBlock),
+        static_cast<uint32>(getTotalNumOutputChannels()),
+    };
 
-	delayLine.prepare(spec);
+    delayLine.prepare(spec);
 
-	float maxRangeMs = parameters.range.parameter->load();
-	int maxSamplesNeeded = static_cast<int>(((latencyMs + maxRangeMs) / 1000.0) * sampleRate);
-	delayLine.setMaximumDelayInSamples(maxSamplesNeeded + 100);
+    // 2. FIX: Allocate buffer for the absolute maximum delay time
+    // (Latency + Max Range variation)
+    float absoluteMaxDelayMs = maxLatencyMs + maxPossibleRange;
+    
+    int maxSamplesNeeded = static_cast<int>((absoluteMaxDelayMs / 1000.0) * sampleRate);
+    
+    // Add a safety buffer (e.g. 1024 samples) to prevent index-out-of-bounds rounding errors
+    delayLine.setMaximumDelayInSamples(maxSamplesNeeded + 1024);
 }
 
 void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {

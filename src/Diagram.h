@@ -43,17 +43,23 @@ public:
 
 		// 3. Write directly to the Image pixels (Fastest possible method)
 		// We write a vertical "scanline" at the current writePos
-		{
-			Image::BitmapData data(canvas, Image::BitmapData::writeOnly);
+// In shift():
+{
+    // Write directly to ARGB memory
+    juce::Image::BitmapData data(canvas, juce::Image::BitmapData::writeOnly);
+    
+    // 1. Fast Column Clear using raw pointers
+    // We iterate down the column to clear the previous trace
+    for (int y = 0; y < h; ++y) {
+        // Get pointer to the pixel at (writePos, y)
+        auto* pixel = (uint32*)data.getPixelPointer(writePos, y);
+        *pixel = 0xFF121212; // Write Background Color directly (ARGB hex)
+    }
 
-			// Clear the column (draw black vertical line)
-			for (int row = 0; row < h; ++row)
-				data.setPixelColour(writePos, row, Colours::black);
-
-			// Draw the "dot" or "line" for the signal
-			// (You could draw a line from previousY to y if you stored previousY)
-			data.setPixelColour(writePos, y, ModernTheme::mainAccent);
-		}
+    // 2. Draw the new dot
+    auto* pixel = (uint32*)data.getPixelPointer(writePos, y);
+    *pixel = 0xFF9D00FF; // Write Accent Color (Purple) directly
+}
 
 		// 4. Increment and wrap the write head
 		writePos = (writePos + 1) % canvas.getWidth();

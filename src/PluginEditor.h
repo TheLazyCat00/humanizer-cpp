@@ -32,6 +32,7 @@ class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorV
 	Humanizer& processorRef;
 	ModernLookAndFeel modernLook;
 	OpenGLContext openGLContext;
+	std::atomic<bool> limitsDirty;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Editor)
 public:
