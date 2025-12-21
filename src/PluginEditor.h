@@ -1,3 +1,4 @@
+// PluginEditor.h
 #pragma once
 
 #include "KnobWithEditor.h"
@@ -30,6 +31,7 @@ class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorV
 	// access the processor object that created it.
 	Humanizer& processorRef;
 	ModernLookAndFeel modernLook;
+	OpenGLContext openGLContext;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Editor)
 public:

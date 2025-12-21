@@ -18,7 +18,8 @@ class KnobWithEditor : public Component {
 	APVTS::SliderAttachment attachment;
 	String displayName;
 	bool dragging = false;
-
+	
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KnobWithEditor)
 public:
 	int maxWidth, maxHeight;
 

@@ -1,106 +1,111 @@
+// Diagram.h
 #pragma once
 
 #include <JuceHeader.h>
 #include "LookAndFeel.h"
 
-class DiagramComponent : public juce::Component {
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMin, smoothMax;
-    
-    juce::Array<float> dataPoints;
-    int head = 0; // Points to the next index to be written
+class DiagramComponent : public Component {
+	SmoothedValue<float, ValueSmoothingTypes::Linear> smoothMin, smoothMax;
+	int writePos = 0;
+	Image canvas;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DiagramComponent)
-
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DiagramComponent)
 public:
-    DiagramComponent(float minValue, float maxValue, int length) {
-        // Initialize with zeros
-        for (int i = 0; i < length; ++i) dataPoints.add(0.0f);
-        
-        // Setup smoothing
-        smoothMin.reset(60, 0.2);
-        smoothMax.reset(60, 0.2);
-        smoothMin.setCurrentAndTargetValue(minValue);
-        smoothMax.setCurrentAndTargetValue(maxValue);
-    }
+	DiagramComponent(float minValue, float maxValue)
+	: canvas(Image::ARGB, 1, 1, true) { // Size updated in resized()
+		setOpaque(true);
+		smoothMin.reset(60, 0.2);
+		smoothMax.reset(60, 0.2);
+		smoothMin.setCurrentAndTargetValue(minValue);
+		smoothMax.setCurrentAndTargetValue(maxValue);
 
-    void shift(float value) {
-        dataPoints.set(head, value);
-        head = (head + 1) % dataPoints.size();
-    }
+		// Optimize image for pixel access
+		canvas.clear(canvas.getBounds(), Colours::black);
+	}
 
-    void paint(juce::Graphics& g) override {
-        auto bounds = getLocalBounds().toFloat();
-        float margin = 10.0f;
-        
-        // Use smoothed values for visual coordinate math
-float currentMin = smoothMin.getCurrentValue();
-    float currentMax = smoothMax.getCurrentValue();
+	void shift(float value) {
+		if (canvas.isNull()) return;
 
-        g.fillAll(juce::Colours::black);
+		// 1. Update Smoothing
+		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
+			smoothMin.getNextValue();
+			smoothMax.getNextValue();
+		}
 
-        // 1. Draw "Zero Line" (Calculated based on smoothed zoom)
-        g.setColour(juce::Colours::white.withAlpha(0.3f));
-        float zeroY = juce::jmap(0.0f, currentMin, currentMax, bounds.getHeight(), 0.0f);
-        
-        juce::Path zeroLinePath;
-        zeroLinePath.startNewSubPath(0.0f, zeroY);
-        zeroLinePath.lineTo(bounds.getWidth(), zeroY);
+		// 2. Map value to Y coordinate
+		float min = smoothMin.getCurrentValue();
+		float max = smoothMax.getCurrentValue();
+		int h = canvas.getHeight();
 
-        juce::Path dashedPath;
-        float dashPattern[] = { 4.0f, 4.0f };
-        juce::PathStrokeType(1.0f).createDashedStroke(dashedPath, zeroLinePath, dashPattern, 2);
-        g.fillPath(dashedPath);
+		// Map value to pixel height (inverted because Y=0 is top)
+		int y = jmap(value, min, max, (float)h, 0.0f);
+		y = jlimit(0, h - 1, y);
 
-        // 2. Draw Min/Max Labels
-        g.setColour(juce::Colours::white.withAlpha(0.7f));
-        g.setFont(14.0f);
-        
-        // We use TargetValue for labels so the text feels stable while the wave zooms
-        juce::String maxStr = juce::String(smoothMax.getTargetValue(), 1) + " ms";
-        juce::String minStr = juce::String(smoothMin.getTargetValue(), 1) + " ms";
+		// 3. Write directly to the Image pixels (Fastest possible method)
+		// We write a vertical "scanline" at the current writePos
+		{
+			Image::BitmapData data(canvas, Image::BitmapData::writeOnly);
 
-        g.drawText(maxStr, margin, margin, 100, 20, juce::Justification::topLeft);
-        g.drawText(minStr, margin, bounds.getHeight() - margin - 20.0f, 100, 20, juce::Justification::bottomLeft);
+			// Clear the column (draw black vertical line)
+			for (int row = 0; row < h; ++row)
+				data.setPixelColour(writePos, row, Colours::black);
 
-        if (dataPoints.size() < 2) return;
+			// Draw the "dot" or "line" for the signal
+			// (You could draw a line from previousY to y if you stored previousY)
+			data.setPixelColour(writePos, y, ModernTheme::mainAccent);
+		}
 
-        // 3. Draw the Noise Path
-        g.setColour(ModernTheme::mainAccent);
-        juce::Path diagramPath;
-        diagramPath.preallocateSpace(dataPoints.size() * 3);
+		// 4. Increment and wrap the write head
+		writePos = (writePos + 1) % canvas.getWidth();
 
-        auto getX = [this, bounds](int iterationIndex) {
-            return juce::jmap((float)iterationIndex, 0.0f, (float)(dataPoints.size() - 1), 0.0f, bounds.getWidth());
-        };
+		// Note: We do NOT call repaint() here. 
+		// The Timer in PluginEditor calls repaint(), which is correct.
+	}
 
-        auto getY = [currentMin, currentMax, bounds](float value) {
-            return juce::jmap(value, currentMin, currentMax, bounds.getHeight(), 0.0f);
-        };
+	void paint(Graphics& g) override {
+		if (canvas.isNull()) return;
 
-        // Start from oldest data (at 'head') and wrap around
-        for (int i = 0; i < dataPoints.size(); ++i) {
-            int bufferIndex = (head + i) % dataPoints.size();
-            float val = dataPoints[bufferIndex];
+		// Since we used setOpaque(true), we don't need to fill the background
+		// unless the image doesn't cover the whole area (which it does).
 
-            if (i == 0)
-                diagramPath.startNewSubPath(getX(i), getY(val));
-            else
-                diagramPath.lineTo(getX(i), getY(val));
-        }
+		int w = getWidth();
+		int h = getHeight();
+		int rightChunkWidth = w - writePos;
 
-        g.strokePath(diagramPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved));
-    }
-void updateSmoothing() {
-        if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
-            smoothMin.getNextValue();
-            smoothMax.getNextValue();
-        }
-    }
+		// Draw the scrolled image
+		g.drawImage(canvas, 
+			  0, 0, rightChunkWidth, h, 
+			  writePos, 0, rightChunkWidth, h);
 
-    void setLimits(float min, float max) {
-        if (std::abs(max - min) < 0.001f) max = min + 0.1f;
+		g.drawImage(canvas, 
+			  rightChunkWidth, 0, writePos, h, 
+			  0, 0, writePos, h);
 
-        smoothMin.setTargetValue(min);
-        smoothMax.setTargetValue(max);
-    }
+		// Optional: Draw a "Playhead" line to mask the seam
+		// g.setColour(Colours::white.withAlpha(0.2f));
+		// g.drawVerticalLine(rightChunkWidth, 0, (float)h);
+	}
+
+	void updateSmoothing() {
+		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
+			smoothMin.getNextValue();
+			smoothMax.getNextValue();
+		}
+	}
+
+	void setLimits(float min, float max) {
+		if (std::abs(max - min) < 0.001f) max = min + 0.1f;
+		smoothMin.setTargetValue(min);
+		smoothMax.setTargetValue(max);
+	}
+
+	void resized() override {
+		if (getWidth() > 0 && getHeight() > 0) {
+			// Ensure we recreate as ARGB
+			Image newCanvas(Image::ARGB, getWidth(), getHeight(), true);
+			newCanvas.clear(newCanvas.getBounds(), Colours::black);
+			canvas = newCanvas;
+			writePos = 0;
+		}
+	}
 };

@@ -1,3 +1,4 @@
+// PluginEditor.cpp
 #include "PluginEditor.h"
 
 //==============================================================================
@@ -5,7 +6,8 @@ Editor::Editor(Humanizer& p)
 		: AudioProcessorEditor (&p)
 		, processorRef(p)
 		, knobs(p.apvts)
-		, diagram(- PluginConfig::range.min, PluginConfig::range.max, 120) {
+		, diagram(- PluginConfig::range.min, PluginConfig::range.max) {
+	openGLContext.attachTo(*this);
 	setSize(600, 400);
 	setResizable(true, true);
 	setLookAndFeel(&modernLook);
@@ -52,6 +54,8 @@ void Editor::resized() {
 }
 
 void Editor::timerCallback() {
+	if (!isShowing()) 
+        return;
 	float val = processorRef.currentNoiseForDisplay.load();
 
 	diagram.shift(val);

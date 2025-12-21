@@ -1,3 +1,4 @@
+// PluginProcessor.h
 #pragma once
 #include <JuceHeader.h>
 #include "Types.h"
