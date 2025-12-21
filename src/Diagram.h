@@ -10,13 +10,13 @@ class Diagram : public Component {
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Diagram)
 public:
-	Diagram(float minValue, float maxValue)
+	Diagram()
 	: canvas(Image::ARGB, 1, 1, true) { // Size updated in resized()
 		setOpaque(true);
 		smoothMin.reset(60, 0.2);
 		smoothMax.reset(60, 0.2);
-		smoothMin.setCurrentAndTargetValue(minValue);
-		smoothMax.setCurrentAndTargetValue(maxValue);
+		smoothMin.setCurrentAndTargetValue(0);
+		smoothMax.setCurrentAndTargetValue(1);
 
 		// Optimize image for pixel access
 		canvas.clear(canvas.getBounds(), Colours::black);

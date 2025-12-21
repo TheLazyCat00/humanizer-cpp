@@ -125,7 +125,7 @@ void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessage
 		float delayInSamples = delayMs / 1000.0 * sr;
 		delayLine.setDelay(delayInSamples);
 
-		for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+		for (int ch = 0; ch < buffer.getNumChannels(); ++ ch) {
 			delayLine.pushSample(ch, buffer.getSample(ch, sample));
 			buffer.setSample(ch, sample, delayLine.popSample(ch));
 		}
