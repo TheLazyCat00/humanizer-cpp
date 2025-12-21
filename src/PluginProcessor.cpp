@@ -3,15 +3,15 @@
 #include "PluginEditor.h"
 
 Humanizer::Humanizer()
-		: AudioProcessor (BusesProperties()
-			.withInput("Input", AudioChannelSet::stereo(), true)
-			.withOutput ("Output", AudioChannelSet::stereo(), true))
-		, apvts(
-			* this,
-			nullptr,
-			"PARAMETERS",
-			createParameterLayout())
-		, perlin(*this) {
+	: AudioProcessor (BusesProperties()
+				   .withInput("Input", AudioChannelSet::stereo(), true)
+				   .withOutput ("Output", AudioChannelSet::stereo(), true))
+	, apvts(
+		* this,
+		nullptr,
+		"PARAMETERS",
+		createParameterLayout())
+	, bezierGen(* this, Random::getSystemRandom().nextInt()) {
 	parameters.forEach([this](Parameter& p) {
 		p.link(apvts, getSampleRate());
 	});
@@ -63,11 +63,9 @@ void Humanizer::prepareToPlay(double sampleRate, int samplesPerBlock) {
 		parameter.smoothed.reset(sampleRate, PluginConfig::ramptime);
 	});
 
-	smoothedDelay.reset (sampleRate, PluginConfig::ramptime); // 0.1s ramp time
-	
 	double latencyMs = getRequiredLatencyMs();
 	int latencySamples = static_cast<int>((latencyMs / 1000.0) * sampleRate);
-	
+
 	setLatencySamples(latencySamples);
 
 	dsp::ProcessSpec spec {
@@ -77,37 +75,52 @@ void Humanizer::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	};
 
 	delayLine.prepare(spec);
-	
+
 	float maxRangeMs = parameters.range.parameter->load();
 	int maxSamplesNeeded = static_cast<int>(((latencyMs + maxRangeMs) / 1000.0) * sampleRate);
 	delayLine.setMaximumDelayInSamples(maxSamplesNeeded + 100);
 }
 
 void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+	parameters.forEach([] (Parameter& p) {
+		if (p.parameter) // Always check for null!
+			p.smoothed.setTargetValue(p.parameter->load());
+	});
+
+	auto playHead = getPlayHead();
 	double bpm = 120.0;
-	if (auto* ph = getPlayHead())
-		if (auto pos = ph->getPosition())
-			bpm = pos->getBpm().orFallback(120.0);
+	double currentBeat = 0.0;
+	float sr = getSampleRate();
+	float requiredLatencyMs = getRequiredLatencyMs();
+	double samplesPerBeat = (60.0 / bpm) * sr;
+	double beatIncrement = 1.0 / samplesPerBeat;
 
-	double sr = getSampleRate();
-	double latencySamples = static_cast<double>(getLatencySamples());
-	double latencyMs = (latencySamples / sr) * 1000.0;
+	if (playHead != nullptr) {
+		if (auto position = playHead->getPosition()) {
+			bpm = position->getBpm().orFallback(120.0);
+			currentBeat = position->getPpqPosition().orFallback(0);
+		}
+	}
+	for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+		parameters.forEach([] (Parameter& p) {
+			if (p.parameter)
+				p.smoothed.getNextValue();
+		});
 
-	for (int i = 0; i < buffer.getNumSamples(); ++i) {
-		double noiseShiftMs = perlin.getValue(bpm, sr);
-			
-		double finalDelayMs = latencyMs + noiseShiftMs;
-		
-		float delayInSamples = static_cast<float>((finalDelayMs / 1000.0) * sr);
+		float rawDelayMs = bezierGen.getValue(currentBeat);
+
+		currentBeat += beatIncrement;
+		float delayMs = requiredLatencyMs + rawDelayMs;
+		float delayInSamples = delayMs / 1000.0 * sr;
 		delayLine.setDelay(delayInSamples);
 
 		for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-			delayLine.pushSample(ch, buffer.getSample(ch, i));
-			buffer.setSample(ch, i, delayLine.popSample(ch));
+			delayLine.pushSample(ch, buffer.getSample(ch, sample));
+			buffer.setSample(ch, sample, delayLine.popSample(ch));
 		}
 
-		if (i == buffer.getNumSamples() - 1)
-			currentNoiseForDisplay.store(static_cast<float>(finalDelayMs));
+		if (sample == buffer.getNumSamples() - 1)
+			currentNoiseForDisplay.store(rawDelayMs);
 	}
 }
 
@@ -122,7 +135,7 @@ AudioProcessorEditor * Humanizer::createEditor() {
 //==============================================================================
 void Humanizer::getStateInformation(MemoryBlock& destData) {
 	auto state = apvts.copyState();
-	state.setProperty("seed", perlin.uniqueSeed, nullptr);
+	state.setProperty("seed", bezierGen.seed, nullptr);
 	std::unique_ptr<XmlElement> xml(state.createXml());
 	copyXmlToBinary(*xml, destData);
 }
@@ -132,11 +145,11 @@ void Humanizer::setStateInformation(const void * data, int sizeInBytes) {
 
 	if (xml != nullptr) {
 		auto tree = juce::ValueTree::fromXml(*xml);
-		
+
 		apvts.replaceState(tree);
-		
+
 		if (tree.hasProperty("seed")) {
-			perlin.uniqueSeed = static_cast<float>(tree.getProperty("seed"));
+			bezierGen.seed = static_cast<float>(tree.getProperty("seed"));
 		}
 	}
 }
@@ -151,6 +164,4 @@ void Humanizer::releaseResources() {
 	parameters.forEach([this] (Parameter& parameter) {
 		parameter.smoothed.reset(getSampleRate(), PluginConfig::ramptime);
 	});
-
-	smoothedDelay.reset(getSampleRate(), PluginConfig::ramptime);
 }
