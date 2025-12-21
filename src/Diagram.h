@@ -4,13 +4,13 @@
 #include <JuceHeader.h>
 #include "LookAndFeel.h"
 
-class DiagramComponent : public Component {
+class Diagram : public Component {
 	SmoothedValue<float, ValueSmoothingTypes::Linear> smoothMin, smoothMax;
 	Image canvas;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DiagramComponent)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Diagram)
 public:
-	DiagramComponent(float minValue, float maxValue)
+	Diagram(float minValue, float maxValue)
 	: canvas(Image::ARGB, 1, 1, true) { // Size updated in resized()
 		setOpaque(true);
 		smoothMin.reset(60, 0.2);

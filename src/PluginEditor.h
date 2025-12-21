@@ -45,7 +45,7 @@ public:
 	void resized() override;
 	void timerCallback() override;
 	Knobs knobs;
-	DiagramComponent diagram;
+	Diagram diagram;
 	void parameterChanged (const juce::String& parameterID, float newValue) override;
     void updateDiagramLimits();
 };
