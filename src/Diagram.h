@@ -6,7 +6,6 @@
 
 class DiagramComponent : public Component {
 	SmoothedValue<float, ValueSmoothingTypes::Linear> smoothMin, smoothMax;
-	int writePos = 0;
 	Image canvas;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DiagramComponent)
@@ -24,73 +23,67 @@ public:
 	}
 
 	void shift(float value) {
-		if (canvas.isNull()) return;
+    const int w = getWidth();
+    const int h = getHeight();
 
-		// 1. Update Smoothing
-		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
-			smoothMin.getNextValue();
-			smoothMax.getNextValue();
-		}
+    // Safety check: Don't process if image isn't ready
+    if (w <= 0 || h <= 0 || canvas.isNull()) return;
 
-		// 2. Map value to Y coordinate
-		float min = smoothMin.getCurrentValue();
-		float max = smoothMax.getCurrentValue();
-		int h = canvas.getHeight();
+    // 1. Move pixels
+    canvas.moveImageSection(0, 0, 1, 0, w - 1, h);
 
-		// Map value to pixel height (inverted because Y=0 is top)
-		int y = jmap(value, min, max, (float)h, 0.0f);
-		y = jlimit(0, h - 1, y);
+    // 2. Clear new column and draw
+    {
+        Graphics g(canvas);
+        
+        // Clear the rightmost column
+        g.setColour(Colours::black);
+        g.drawVerticalLine(w - 1, 0.0f, (float)h);
 
-		// 3. Write directly to the Image pixels (Fastest possible method)
-		// We write a vertical "scanline" at the current writePos
-// In shift():
-{
-    // Write directly to ARGB memory
-    juce::Image::BitmapData data(canvas, juce::Image::BitmapData::writeOnly);
-    
-    // 1. Fast Column Clear using raw pointers
-    // We iterate down the column to clear the previous trace
-    for (int y = 0; y < h; ++y) {
-        // Get pointer to the pixel at (writePos, y)
-        auto* pixel = (uint32*)data.getPixelPointer(writePos, y);
-        *pixel = 0xFF121212; // Write Background Color directly (ARGB hex)
+        // Calculate Y position
+        float min = smoothMin.getCurrentValue();
+        float max = smoothMax.getCurrentValue();
+        
+        // Use float for jmap to keep precision, then round
+        float yVal = jmap(value, min, max, (float)h - 1.0f, 0.0f);
+        int yPos = jlimit(0, h - 1, roundToInt(yVal));
+        
+        // Use a 2x2 square instead of setPixelAt so it's actually visible!
+        g.setColour(ModernTheme::mainAccent);
+        g.fillRect(w - 2, yPos - 1, 2, 2); 
     }
 
-    // 2. Draw the new dot
-    auto* pixel = (uint32*)data.getPixelPointer(writePos, y);
-    *pixel = 0xFF9D00FF; // Write Accent Color (Purple) directly
+    repaint();
 }
 
-		// 4. Increment and wrap the write head
-		writePos = (writePos + 1) % canvas.getWidth();
-
-		// Note: We do NOT call repaint() here. 
-		// The Timer in PluginEditor calls repaint(), which is correct.
-	}
-
 	void paint(Graphics& g) override {
-		if (canvas.isNull()) return;
+		g.fillAll(Colours::black);
 
-		// Since we used setOpaque(true), we don't need to fill the background
-		// unless the image doesn't cover the whole area (which it does).
+		if (canvas.isValid()) {
+			g.drawImageAt(canvas, 0, 0);
+		}
 
-		int w = getWidth();
-		int h = getHeight();
-		int rightChunkWidth = w - writePos;
+		float margin = 10.0f;
+		auto bounds = getLocalBounds().toFloat();
+		g.setColour(Colours::white.withAlpha(0.6f));
+		float zeroY = jmap(0.0f, smoothMin.getCurrentValue(), smoothMax.getCurrentValue(), bounds.getHeight(), 0.0f);
 
-		// Draw the scrolled image
-		g.drawImage(canvas, 
-			  0, 0, rightChunkWidth, h, 
-			  writePos, 0, rightChunkWidth, h);
+		Path zeroLinePath;
+		zeroLinePath.startNewSubPath(0, zeroY);
+		zeroLinePath.lineTo(bounds.getWidth(), zeroY);
 
-		g.drawImage(canvas, 
-			  rightChunkWidth, 0, writePos, h, 
-			  0, 0, writePos, h);
+		Path dashedPath;
+		float dashPattern[] = { 4.0f, 4.0f };
+		PathStrokeType(1.0f).createDashedStroke(dashedPath, zeroLinePath, dashPattern, 2);
+		g.fillPath(dashedPath);
 
-		// Optional: Draw a "Playhead" line to mask the seam
-		// g.setColour(Colours::white.withAlpha(0.2f));
-		// g.drawVerticalLine(rightChunkWidth, 0, (float)h);
+		g.setColour(Colours::white.withAlpha(0.7f));
+		g.setFont(14.0f);
+		g.drawText(String(smoothMin.getTargetValue(), 1) + " ms", margin, margin, 100, 20, Justification::topLeft);
+		g.drawText(String(smoothMax.getTargetValue(), 1) + " ms", margin, bounds.getHeight() - margin - 20.0f, 100, 20, Justification::bottomLeft);
 	}
+
+	
 
 	void updateSmoothing() {
 		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
@@ -111,7 +104,6 @@ public:
 			Image newCanvas(Image::ARGB, getWidth(), getHeight(), true);
 			newCanvas.clear(newCanvas.getBounds(), Colours::black);
 			canvas = newCanvas;
-			writePos = 0;
 		}
 	}
 };

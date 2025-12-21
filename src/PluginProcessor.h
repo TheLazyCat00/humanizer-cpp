@@ -75,7 +75,6 @@ public:
 	Parameters parameters;
 	APVTS apvts;
 	BezierGenerator bezierGen;
-	std::atomic<float> currentNoiseForDisplay { 0.0f };
 };
 
 //==============================================================================

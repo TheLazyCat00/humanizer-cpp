@@ -83,8 +83,6 @@ void Humanizer::prepareToPlay(double sampleRate, int samplesPerBlock) {
 
     delayLine.prepare(spec);
 
-    // 2. FIX: Allocate buffer for the absolute maximum delay time
-    // (Latency + Max Range variation)
     float absoluteMaxDelayMs = maxLatencyMs + maxPossibleRange;
     
     int maxSamplesNeeded = static_cast<int>((absoluteMaxDelayMs / 1000.0) * sampleRate);
@@ -99,7 +97,6 @@ void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessage
 			p.smoothed.setTargetValue(p.parameter->load());
 	});
 
-	auto playHead = getPlayHead();
 	double bpm = 120.0;
 	double currentBeat = 0.0;
 	float sr = getSampleRate();
@@ -107,12 +104,14 @@ void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessage
 	double samplesPerBeat = (60.0 / bpm) * sr;
 	double beatIncrement = 1.0 / samplesPerBeat;
 
+	auto playHead = getPlayHead();
 	if (playHead != nullptr) {
 		if (auto position = playHead->getPosition()) {
 			bpm = position->getBpm().orFallback(120.0);
 			currentBeat = position->getPpqPosition().orFallback(0);
 		}
 	}
+
 	for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
 		parameters.forEach([] (Parameter& p) {
 			if (p.parameter)
@@ -130,9 +129,6 @@ void Humanizer::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessage
 			delayLine.pushSample(ch, buffer.getSample(ch, sample));
 			buffer.setSample(ch, sample, delayLine.popSample(ch));
 		}
-
-		if (sample == buffer.getNumSamples() - 1)
-			currentNoiseForDisplay.store(rawDelayMs);
 	}
 }
 

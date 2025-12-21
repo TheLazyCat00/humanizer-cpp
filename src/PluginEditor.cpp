@@ -1,5 +1,6 @@
 // PluginEditor.cpp
 #include "PluginEditor.h"
+#include "PluginConfig.h"
 
 //==============================================================================
 Editor::Editor(Humanizer& p)
@@ -30,7 +31,7 @@ Editor::~Editor() {
 
 //==============================================================================
 void Editor::paint(Graphics& g) {
-	g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
+	g.fillAll(ModernTheme::background);
 }
 
 void Editor::resized() {
@@ -54,14 +55,52 @@ void Editor::resized() {
 void Editor::timerCallback() {
 	if (!isShowing()) return;
 
-	// Handle updates 60 times a second, instead of 1000 times a second
 	if (limitsDirty.exchange(false)) {
 		updateDiagramLimits();
 	}
+	diagram.updateSmoothing();
 
-	float val = processorRef.currentNoiseForDisplay.load();
-	diagram.shift(val);
-	diagram.repaint();
+	auto playHead = processorRef.getPlayHead();
+	if (playHead == nullptr) return;
+	auto position = playHead->getPosition();
+	if (!position.hasValue()) return;
+
+	double currentBeat = position->getPpqPosition().orFallback(0.0);
+
+	// 1. Calculate delta
+	double quartersTraveled = currentBeat - lastPlayHeadPos;
+
+	// Handle wrap-around/loops/stops
+	if (quartersTraveled <= 0 || quartersTraveled > 1.0) {
+		lastPlayHeadPos = currentBeat;
+		return;
+	}
+
+	// 2. Define "Zoom": How many pixels wide is one quarter note?
+	const double pixelsPerQuarter = double(diagram.getWidth()) / 4;
+
+	// Use a double for accumulation to avoid losing sub-pixel movement
+	static double pixelAccumulator = 0.0;
+	pixelAccumulator += quartersTraveled * pixelsPerQuarter;
+
+	int pixelsToShift = static_cast<int>(pixelAccumulator);
+
+	if (pixelsToShift > 0) {
+		// Subtract the whole pixels we are about to process from the accumulator
+		pixelAccumulator -= pixelsToShift;
+
+		// 3. Step through the gap
+		double beatStep = quartersTraveled / pixelsToShift;
+
+		for (int i = 1; i <= pixelsToShift; ++i) {
+			// Sample from the last position up to the current position
+			double sampleTime = lastPlayHeadPos + (beatStep * i);
+			float val = (float)processorRef.bezierGen.getValue(sampleTime);
+			diagram.shift(val);
+		}
+	}
+
+	lastPlayHeadPos = currentBeat;
 }
 
 void Editor::parameterChanged(const String& parameterID, float newValue) {
@@ -76,7 +115,5 @@ void Editor::updateDiagramLimits() {
 	float theoreticalMax = 0.5 * r * (c + 1);
 	float theoreticalMin = 0.5 * r * (c - 1);
 
-	float padding = r * 0.1f;
-
-	diagram.setLimits(theoreticalMin - padding, theoreticalMax + padding);
+	diagram.setLimits(theoreticalMin, theoreticalMax);
 }

@@ -33,6 +33,7 @@ class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorV
 	ModernLookAndFeel modernLook;
 	OpenGLContext openGLContext;
 	std::atomic<bool> limitsDirty;
+	double lastPlayHeadPos = 0;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Editor)
 public:
