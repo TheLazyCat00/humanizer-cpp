@@ -89,6 +89,7 @@ public:
 		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
 			smoothMin.getNextValue();
 			smoothMax.getNextValue();
+			repaint();
 		}
 	}
 
