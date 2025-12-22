@@ -13,6 +13,8 @@ Editor::Editor(Humanizer& p)
 	openGLContext.attachTo(* this);
 	setSize(600, 400);
 	setResizable(true, true);
+	setResizeLimits(300, 250, 1200, 800);
+
 	setLookAndFeel(&modernLook);
 	tooltipWindow->setMillisecondsBeforeTipAppears(1500);
 
