@@ -18,43 +18,38 @@ public:
 		smoothMin.setCurrentAndTargetValue(0);
 		smoothMax.setCurrentAndTargetValue(1);
 
-		// Optimize image for pixel access
 		canvas.clear(canvas.getBounds(), Colours::black);
 	}
 
 	void shift(const std::vector<float>& values) {
-    const int w = getWidth();
-    const int h = getHeight();
-    if (w <= 0 || h <= 0 || canvas.isNull() || values.empty()) return;
+		const int w = getWidth();
+		const int h = getHeight();
+		if (w <= 0 || h <= 0 || canvas.isNull() || values.empty()) return;
 
-    int numPixels = (int)values.size();
-    
-    // 1. Move the image left by the number of new samples
-    canvas.moveImageSection(0, 0, numPixels, 0, w - numPixels, h);
+		int numPixels = (int)values.size();
 
-    // 2. Open ONE Graphics context for the new section
-    {
-        Graphics g(canvas);
-        float min = smoothMin.getCurrentValue();
-        float max = smoothMax.getCurrentValue();
+		canvas.moveImageSection(0, 0, numPixels, 0, w - numPixels, h);
 
-        for (int i = 0; i < numPixels; ++i) {
-            int x = (w - numPixels) + i;
-            
-            // Clear the vertical strip
-            g.setColour(Colours::black);
-            g.drawVerticalLine(x, 0.0f, (float)h);
+		{
+			Graphics g(canvas);
+			float min = smoothMin.getCurrentValue();
+			float max = smoothMax.getCurrentValue();
 
-            // Draw the point
-            float yVal = jmap(values[i], min, max, (float)h - 1.0f, 0.0f);
-            int yPos = jlimit(0, h - 1, roundToInt(yVal));
-            
-            g.setColour(ModernTheme::mainAccent);
-            g.fillRect(x - 1, yPos - 1, 2, 2);
-        }
-    }
-    repaint();
-}
+			for (int i = 0; i < numPixels; ++i) {
+				int x = (w - numPixels) + i;
+
+				g.setColour(Colours::black);
+				g.drawVerticalLine(x, 0.0f, (float)h);
+
+				float yVal = jmap(values[i], min, max, (float)h - 1.0f, 0.0f);
+				int yPos = jlimit(0, h - 1, roundToInt(yVal));
+
+				g.setColour(ModernTheme::mainAccent);
+				g.fillRect(x - 1, yPos - 1, 2, 2);
+			}
+		}
+		repaint();
+	}
 
 	void paint(Graphics& g) override {
 		g.fillAll(Colours::black);
@@ -83,7 +78,7 @@ public:
 		g.drawText(String(smoothMax.getTargetValue(), 1) + " ms", margin, bounds.getHeight() - margin - 20.0f, 100, 20, Justification::bottomLeft);
 	}
 
-	
+
 
 	void updateSmoothing() {
 		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {

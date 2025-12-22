@@ -27,8 +27,6 @@ struct Knobs {
 
 //==============================================================================
 class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorValueTreeState::Listener {
-	// This reference is provided as a quick way for your editor to
-	// access the processor object that created it.
 	Humanizer& processorRef;
 	ModernLookAndFeel modernLook;
 	OpenGLContext openGLContext;

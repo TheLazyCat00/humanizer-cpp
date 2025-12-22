@@ -14,7 +14,7 @@ Editor::Editor(Humanizer& p)
 	setLookAndFeel(&modernLook);
 
 	processorRef.apvts.addParameterListener(PluginConfig::range.name, this);
-    processorRef.apvts.addParameterListener(PluginConfig::center.name, this);
+	processorRef.apvts.addParameterListener(PluginConfig::center.name, this);
 	addAndMakeVisible(diagram);
 	knobs.forEach([this] (KnobWithEditor& knob) {
 		addAndMakeVisible(knob);
@@ -30,7 +30,6 @@ Editor::~Editor() {
     processorRef.apvts.removeParameterListener(PluginConfig::center.name, this);
 }
 
-//==============================================================================
 void Editor::paint(Graphics& g) {
 	g.fillAll(ModernTheme::background);
 }
@@ -77,8 +76,7 @@ void Editor::timerCallback() {
 		return;
 	}
 
-	// 2. Define "Zoom": How many pixels wide is one quarter note?
-	const double pixelsPerQuarter = double(diagram.getWidth()) / 4;
+	const double pixelsPerQuarter = double(diagram.getWidth()) / 8;
 
 	// Use a double for accumulation to avoid losing sub-pixel movement
 	static double pixelAccumulator = 0.0;
