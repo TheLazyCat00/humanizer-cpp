@@ -1,4 +1,5 @@
 // PluginEditor.cpp
+#include <vector>
 #include "PluginEditor.h"
 #include "PluginConfig.h"
 
@@ -20,7 +21,7 @@ Editor::Editor(Humanizer& p)
 		addAndMakeVisible(knob);
 	});
 
-	startTimerHz(60);
+	startTimerHz(30);
 }
 
 Editor::~Editor() {

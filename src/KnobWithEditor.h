@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <memory.h>
 #include "Types.h"
 #include "LookAndFeel.h"
 

@@ -1,6 +1,9 @@
 // PluginProcessor.h
 #pragma once
 #include <JuceHeader.h>
+#include <limits>
+#include <algorithm>
+#include <cmath>
 #include "Types.h"
 #include "PluginConfig.h"
 

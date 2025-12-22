@@ -1,5 +1,8 @@
 // PluginProcessor.cpp
 #include <JuceHeader.h>
+#include <memory>
+#include <vector>
+#include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 

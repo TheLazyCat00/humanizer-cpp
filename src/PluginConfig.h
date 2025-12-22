@@ -1,6 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <functional>
+#include <atomic>
 #include "Types.h"
 
 struct ParameterSettings {

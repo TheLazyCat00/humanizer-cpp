@@ -1,90 +1,98 @@
-// Diagram.h
 #pragma once
 
 #include <JuceHeader.h>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 #include "LookAndFeel.h"
 
 class Diagram : public Component {
+	// Data storage: Use a circular buffer to avoid expensive vector erasures
+	std::vector<float> dataBuffer;
+	int writeIndex = 0;
+	int totalPoints = 0;
+
 	SmoothedValue<float, ValueSmoothingTypes::Linear> smoothMin, smoothMax;
-	Image canvas;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Diagram)
+
 public:
-	Diagram()
-	: canvas(Image::ARGB, 1, 1, true) { // Size updated in resized()
+	Diagram() {
 		setOpaque(true);
-		smoothMin.reset(60, 0.2);
-		smoothMax.reset(60, 0.2);
+		smoothMin.reset(30, 0.2);
+		smoothMax.reset(30, 0.2);
 		smoothMin.setCurrentAndTargetValue(0);
 		smoothMax.setCurrentAndTargetValue(1);
-
-		canvas.clear(canvas.getBounds(), Colours::black);
 	}
 
 	void shift(const std::vector<float>& values) {
-		const int w = getWidth();
-		const int h = getHeight();
-		if (w <= 0 || h <= 0 || canvas.isNull() || values.empty()) return;
+		if (dataBuffer.empty()) return;
 
-		int numPixels = (int)values.size();
-
-		canvas.moveImageSection(0, 0, numPixels, 0, w - numPixels, h);
-
-		{
-			Graphics g(canvas);
-			float min = smoothMin.getCurrentValue();
-			float max = smoothMax.getCurrentValue();
-
-			for (int i = 0; i < numPixels; ++i) {
-				int x = (w - numPixels) + i;
-
-				g.setColour(Colours::black);
-				g.drawVerticalLine(x, 0.0f, (float)h);
-
-				float yVal = jmap(values[i], min, max, (float)h - 1.0f, 0.0f);
-				int yPos = jlimit(0, h - 1, roundToInt(yVal));
-
-				g.setColour(ModernTheme::mainAccent);
-				g.fillRect(x - 1, yPos - 1, 2, 2);
-			}
+		// Add new values to circular buffer
+		for (float v : values) {
+			dataBuffer[writeIndex] = v;
+			writeIndex = (writeIndex + 1) % dataBuffer.size();
+			totalPoints = std::min((int)dataBuffer.size(), totalPoints + 1);
 		}
-		repaint();
 	}
 
 	void paint(Graphics& g) override {
+		auto bounds = getLocalBounds().toFloat();
 		g.fillAll(Colours::black);
 
-		if (canvas.isValid()) {
-			g.drawImageAt(canvas, 0, 0);
+		if (totalPoints < 2) return;
+
+		// 1. Prepare the Path
+		Path graphPath;
+		graphPath.preallocateSpace(totalPoints * 3); // Optimization: avoid reallocs
+
+		float min = smoothMin.getCurrentValue();
+		float max = smoothMax.getCurrentValue();
+		float w = bounds.getWidth();
+		float h = bounds.getHeight();
+
+		// 2. Iterate through circular buffer to build path
+		// We start from the oldest point and go to the newest
+		for (int i = 0; i < totalPoints; ++i) {
+			// Calculate index in circular buffer
+			int bufferIdx = (writeIndex - totalPoints + i + (int)dataBuffer.size()) % (int)dataBuffer.size();
+
+			float x = w - (totalPoints - i);
+			float yVal = jmap(dataBuffer[bufferIdx], min, max, h - 2.0f, 2.0f);
+			float yPos = jlimit(0.0f, h, yVal);
+
+			if (i == 0)
+				graphPath.startNewSubPath(x, yPos);
+			else
+				graphPath.lineTo(x, yPos);
 		}
 
+		// 3. Draw the Path (Stroking is usually faster than filling a complex shape)
+		g.setColour(ModernTheme::mainAccent);
+		g.strokePath(graphPath, PathStrokeType(1.5f, PathStrokeType::curved, PathStrokeType::rounded));
+
+		// 4. Draw UI Overlays (Zero line and labels)
+		drawOverlays(g, bounds);
+	}
+
+	void drawOverlays(Graphics& g, Rectangle<float> bounds) {
 		float margin = 10.0f;
-		auto bounds = getLocalBounds().toFloat();
-		g.setColour(Colours::white.withAlpha(0.6f));
 		float zeroY = jmap(0.0f, smoothMin.getCurrentValue(), smoothMax.getCurrentValue(), bounds.getHeight(), 0.0f);
 
-		Path zeroLinePath;
-		zeroLinePath.startNewSubPath(0, zeroY);
-		zeroLinePath.lineTo(bounds.getWidth(), zeroY);
-
-		Path dashedPath;
+		g.setColour(Colours::white.withAlpha(0.4f));
 		float dashPattern[] = { 4.0f, 4.0f };
-		PathStrokeType(1.0f).createDashedStroke(dashedPath, zeroLinePath, dashPattern, 2);
-		g.fillPath(dashedPath);
+		g.drawDashedLine(Line<float>(0, zeroY, bounds.getWidth(), zeroY), dashPattern, 2, 1.0f);
 
 		g.setColour(Colours::white.withAlpha(0.7f));
 		g.setFont(14.0f);
-		g.drawText(String(smoothMin.getTargetValue(), 1) + " ms", margin, margin, 100, 20, Justification::topLeft);
-		g.drawText(String(smoothMax.getTargetValue(), 1) + " ms", margin, bounds.getHeight() - margin - 20.0f, 100, 20, Justification::bottomLeft);
+		g.drawText(String(smoothMax.getTargetValue(), 1) + " ms", margin, 2, 100, 20, Justification::topLeft);
+		g.drawText(String(smoothMin.getTargetValue(), 1) + " ms", margin, bounds.getHeight() - 22, 100, 20, Justification::bottomLeft);
 	}
-
-
 
 	void updateSmoothing() {
 		if (smoothMin.isSmoothing() || smoothMax.isSmoothing()) {
 			smoothMin.getNextValue();
 			smoothMax.getNextValue();
-			repaint();
 		}
 	}
 
@@ -95,11 +103,11 @@ public:
 	}
 
 	void resized() override {
-		if (getWidth() > 0 && getHeight() > 0) {
-			// Ensure we recreate as ARGB
-			Image newCanvas(Image::ARGB, getWidth(), getHeight(), true);
-			newCanvas.clear(newCanvas.getBounds(), Colours::black);
-			canvas = newCanvas;
+		int w = getWidth();
+		if (w > 0) {
+			dataBuffer.assign(w, 0.0f); // Size buffer to match width
+			writeIndex = 0;
+			totalPoints = 0;
 		}
 	}
 };

@@ -1,6 +1,8 @@
 // PluginEditor.h
 #pragma once
 
+#include <functional>
+#include <atomic>
 #include "KnobWithEditor.h"
 #include "Diagram.h"
 #include "PluginProcessor.h"
@@ -26,7 +28,7 @@ struct Knobs {
 };
 
 //==============================================================================
-class Editor : public AudioProcessorEditor, public Timer, public AudioProcessorValueTreeState::Listener {
+class Editor : public AudioProcessorEditor, public Timer, public APVTS::Listener {
 	Humanizer& processorRef;
 	ModernLookAndFeel modernLook;
 	OpenGLContext openGLContext;
