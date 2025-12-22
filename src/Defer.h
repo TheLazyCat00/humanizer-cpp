@@ -1,15 +1,21 @@
 #pragma once
-
 #include <utility>
 
-template<typename F>
-struct ScopeGuard {
-	F func;
-	ScopeGuard(F&& f) : func(std::forward<F>(f)) {}
-	~ScopeGuard() { func(); }
-};
+namespace utils {
 
-#define CONCAT_INNER(a, b) a ## b
-#define CONCAT(a, b) CONCAT_INNER(a, b)
+	template <typename F>
+	struct ScopeGuard {
+		F func;
+		ScopeGuard(F&& f) : func(std::forward<F>(f)) {}
+		~ScopeGuard() { func(); }
+	};
 
-#define defer ScopeGuard CONCAT(defer_, __LINE__) = [&]
+	template <typename F>
+	ScopeGuard(F) -> ScopeGuard<F>;
+
+}
+
+#define CONCAT_INTERNAL(a, b) a ## b
+#define CONCAT(a, b) CONCAT_INTERNAL(a, b)
+
+#define defer const utils::ScopeGuard CONCAT(defer_, __LINE__) = [&]

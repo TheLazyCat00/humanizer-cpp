@@ -2,6 +2,7 @@
 #include <vector>
 #include "PluginEditor.h"
 #include "PluginConfig.h"
+#include "Defer.h"
 
 //==============================================================================
 Editor::Editor(Humanizer& p)
@@ -80,7 +81,11 @@ void Editor::timerCallback() {
 	if (limitsDirty.exchange(false)) {
 		updateDiagramLimits();
 	}
-	diagram.updateSmoothing();
+
+	defer {
+		diagram.updateSmoothing();
+		diagram.repaint();
+	};
 
 	auto playHead = processorRef.getPlayHead();
 	if (playHead == nullptr) return;
