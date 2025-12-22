@@ -22,37 +22,37 @@ public:
 		canvas.clear(canvas.getBounds(), Colours::black);
 	}
 
-	void shift(float value) {
+	void shift(const std::vector<float>& values) {
     const int w = getWidth();
     const int h = getHeight();
+    if (w <= 0 || h <= 0 || canvas.isNull() || values.empty()) return;
 
-    // Safety check: Don't process if image isn't ready
-    if (w <= 0 || h <= 0 || canvas.isNull()) return;
+    int numPixels = (int)values.size();
+    
+    // 1. Move the image left by the number of new samples
+    canvas.moveImageSection(0, 0, numPixels, 0, w - numPixels, h);
 
-    // 1. Move pixels
-    canvas.moveImageSection(0, 0, 1, 0, w - 1, h);
-
-    // 2. Clear new column and draw
+    // 2. Open ONE Graphics context for the new section
     {
         Graphics g(canvas);
-        
-        // Clear the rightmost column
-        g.setColour(Colours::black);
-        g.drawVerticalLine(w - 1, 0.0f, (float)h);
-
-        // Calculate Y position
         float min = smoothMin.getCurrentValue();
         float max = smoothMax.getCurrentValue();
-        
-        // Use float for jmap to keep precision, then round
-        float yVal = jmap(value, min, max, (float)h - 1.0f, 0.0f);
-        int yPos = jlimit(0, h - 1, roundToInt(yVal));
-        
-        // Use a 2x2 square instead of setPixelAt so it's actually visible!
-        g.setColour(ModernTheme::mainAccent);
-        g.fillRect(w - 2, yPos - 1, 2, 2); 
-    }
 
+        for (int i = 0; i < numPixels; ++i) {
+            int x = (w - numPixels) + i;
+            
+            // Clear the vertical strip
+            g.setColour(Colours::black);
+            g.drawVerticalLine(x, 0.0f, (float)h);
+
+            // Draw the point
+            float yVal = jmap(values[i], min, max, (float)h - 1.0f, 0.0f);
+            int yPos = jlimit(0, h - 1, roundToInt(yVal));
+            
+            g.setColour(ModernTheme::mainAccent);
+            g.fillRect(x - 1, yPos - 1, 2, 2);
+        }
+    }
     repaint();
 }
 

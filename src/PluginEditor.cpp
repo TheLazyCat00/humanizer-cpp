@@ -24,6 +24,7 @@ Editor::Editor(Humanizer& p)
 }
 
 Editor::~Editor() {
+	openGLContext.detach();
 	setLookAndFeel(nullptr);
 	processorRef.apvts.removeParameterListener(PluginConfig::range.name, this);
     processorRef.apvts.removeParameterListener(PluginConfig::center.name, this);
@@ -85,19 +86,16 @@ void Editor::timerCallback() {
 
 	int pixelsToShift = static_cast<int>(pixelAccumulator);
 
+	std::vector<float> valuesToDraw;
 	if (pixelsToShift > 0) {
-		// Subtract the whole pixels we are about to process from the accumulator
 		pixelAccumulator -= pixelsToShift;
-
-		// 3. Step through the gap
 		double beatStep = quartersTraveled / pixelsToShift;
 
 		for (int i = 1; i <= pixelsToShift; ++i) {
-			// Sample from the last position up to the current position
 			double sampleTime = lastPlayHeadPos + (beatStep * i);
-			float val = (float)processorRef.bezierGen.getValue(sampleTime);
-			diagram.shift(val);
+			valuesToDraw.push_back((float)processorRef.bezierGen.getValue(sampleTime));
 		}
+		diagram.shift(valuesToDraw); // Call once!
 	}
 
 	lastPlayHeadPos = currentBeat;
