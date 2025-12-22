@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include "LookAndFeel.h"
+#include "Defer.h"
 
 class Diagram : public Component {
 	// Data storage: Use a circular buffer to avoid expensive vector erasures
@@ -39,6 +40,9 @@ public:
 	void paint(Graphics& g) override {
 		auto bounds = getLocalBounds().toFloat();
 		g.fillAll(Colours::black);
+		defer {
+			drawOverlays(g, bounds);
+		};
 
 		if (totalPoints < 2) return;
 
@@ -70,9 +74,6 @@ public:
 		// 3. Draw the Path (Stroking is usually faster than filling a complex shape)
 		g.setColour(ModernTheme::mainAccent);
 		g.strokePath(graphPath, PathStrokeType(1.5f, PathStrokeType::curved, PathStrokeType::rounded));
-
-		// 4. Draw UI Overlays (Zero line and labels)
-		drawOverlays(g, bounds);
 	}
 
 	void drawOverlays(Graphics& g, Rectangle<float> bounds) {

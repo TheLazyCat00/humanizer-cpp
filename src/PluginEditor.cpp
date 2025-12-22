@@ -14,9 +14,13 @@ Editor::Editor(Humanizer& p)
 	setSize(600, 400);
 	setResizable(true, true);
 	setLookAndFeel(&modernLook);
+	tooltipWindow->setMillisecondsBeforeTipAppears(1500);
 
 	processorRef.apvts.addParameterListener(PluginConfig::range.name, this);
 	processorRef.apvts.addParameterListener(PluginConfig::center.name, this);
+
+	updateDiagramLimits();
+
 	addAndMakeVisible(diagram);
 	knobs.forEach([this] (KnobWithEditor& knob) {
 		addAndMakeVisible(knob);

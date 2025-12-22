@@ -6,16 +6,35 @@
 #include "Types.h"
 
 struct ParameterSettings {
-	const String name;
+	const String& name;
 	const float min;
 	const float max;
 	const float defaultVal;
+	const String& desc;
 };
 
 namespace PluginConfig {
-	static const ParameterSettings range { "Range", 0.0f, 200.0f, 0.0f };
-	static const ParameterSettings center { "Center", -1.0f, 1.0f, 0.0f };
-	static const ParameterSettings speed { "Speed",  1.0f, 16.0f, 1.0f };
+	static const ParameterSettings range {
+		"Range",
+		0.0f,
+		200.0f,
+		0.0f,
+		"Sets the amount of ms the delay can go up + down (in total). Do not automate this parameter."
+	};
+	static const ParameterSettings center {
+		"Center",
+		-1.0f,
+		1.0f,
+		0.0f,
+		"Sets the center of the LFO. Do not automate this parameter."
+	};
+	static const ParameterSettings speed {
+		"Speed",
+		1.0f,
+		16.0f,
+		1.0f,
+		"Sets the time for one slope to finish in beats. Feel free to automate this parameter."
+	};
 	static const float ramptime = 0.05;
 }
 

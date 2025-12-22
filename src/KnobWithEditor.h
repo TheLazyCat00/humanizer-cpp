@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include <memory.h>
+#include "PluginConfig.h"
 #include "Types.h"
 #include "LookAndFeel.h"
 
@@ -22,14 +23,11 @@ class KnobWithEditor : public Component {
 	
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KnobWithEditor)
 public:
-	int maxWidth, maxHeight;
-
-	KnobWithEditor(AudioProcessorValueTreeState& apvts, const String& name, int maxWidth, int maxHeight)
-			: attachment(apvts, name, slider) {
-		displayName = name;
-
-		this->maxWidth = maxWidth;
-		this->maxHeight = maxHeight;
+	KnobWithEditor(APVTS& apvts, const ParameterSettings& parameter)
+			: attachment(apvts, parameter.name, slider) {
+		displayName = parameter.name;
+		slider.setTooltip(parameter.desc);
+		editor.setTooltip(parameter.desc);
 
 		lookAndFeel = std::make_unique<ModernLookAndFeel>();
 		slider.setLookAndFeel(lookAndFeel.get());
@@ -42,7 +40,7 @@ public:
 		editor.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
 		editor.setColour(TextEditor::textColourId, Colours::white);
 		
-		setInterceptsMouseClicks(false, true);
+		setInterceptsMouseClicks(true, true);
 		editor.setInterceptsMouseClicks(true, true);
 
 		editor.onReturnKey = [this] { commitEditorValue(); };
@@ -100,10 +98,7 @@ public:
 	}
 
 	Rectangle<int> getModifiedBounds() {
-		auto minWidth = jmin(getWidth(), maxWidth);
-		auto minHeight = jmin(getHeight(), maxHeight);
-
-		auto minLength = jmin(minWidth, minHeight);
+		auto minLength = jmin(getWidth(), getHeight());
 		return getLocalBounds().withSizeKeepingCentre(minLength, minLength);
 	}
 
