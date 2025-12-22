@@ -37,17 +37,38 @@ void Editor::paint(Graphics& g) {
 void Editor::resized() {
 	auto area = getLocalBounds().reduced(20);
 
+	float availableHeight = (float)area.getHeight();
+	float idealKnobWidth = (availableHeight / 3.0f);
+	
+	float dynamicWidth = jmin(130.0f, idealKnobWidth);
+
 	FlexBox knobsContainer;
 	knobsContainer.flexDirection = FlexBox::Direction::column;
-	knobsContainer.items.add(FlexItem(knobs.range).withMargin(5).withMinHeight(50).withFlex(1.0f));
-	knobsContainer.items.add(FlexItem(knobs.center).withMargin(5).withMinHeight(50).withFlex(1.0f));
-	knobsContainer.items.add(FlexItem(knobs.speed).withMargin(5).withMinHeight(50).withFlex(1.0f));
+	knobsContainer.justifyContent = FlexBox::JustifyContent::spaceBetween;
+	
+	const FlexItem::Margin knobMargin = FlexItem::Margin(0, 0, 15, 0);
+	knobsContainer.items.add(FlexItem(knobs.range)
+		.withFlex(1.0f)
+		.withMinWidth(50.0f)
+		.withMargin(knobMargin));
+	knobsContainer.items.add(FlexItem(knobs.center)
+		.withFlex(1.0f)
+		.withMinWidth(50.0f)
+		.withMargin(knobMargin));
+	knobsContainer.items.add(FlexItem(knobs.speed)
+		.withFlex(1.0f)
+		.withMinWidth(50.0f));
 
 	FlexBox viewport;
 	viewport.flexDirection = FlexBox::Direction::row;
 
-	viewport.items.add(FlexItem(knobsContainer).withWidth(150.0f).withMargin(5));
-	viewport.items.add(FlexItem(diagram).withFlex(1.0f).withMargin(5));
+	viewport.items.add(FlexItem(knobsContainer)
+		.withFlex(0.0f, 1.0f, dynamicWidth));
+
+	viewport.items.add(FlexItem().withWidth(20));
+
+	viewport.items.add(FlexItem(diagram)
+		.withFlex(3.0f));
 
 	viewport.performLayout(area);
 }
