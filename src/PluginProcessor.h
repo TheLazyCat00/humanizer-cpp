@@ -83,29 +83,41 @@ inline float BezierGenerator::getNormalized(double currentBeat) {
 	float speedBeats = humanizer.parameters.speed.smoothed.getCurrentValue();
 	speedBeats = std::max(0.1f, speedBeats);
 
-	// 1. Calculate which segment we are in and the 0.0-1.0 phase within it
 	double segmentFloat = currentBeat / speedBeats;
 	int segmentIndex = static_cast<int>(std::floor(segmentFloat));
-	float t = static_cast<float>(segmentFloat - segmentIndex); // This is our 'phase'
+	float t = static_cast<float>(segmentFloat - segmentIndex);
 
-	// 2. Generate deterministic Anchors for THIS segment and the NEXT
-	// Using sub-seeds (e.g. 100, 200) to get different random properties for same segment
-	Anchor p0 = { getDeterministicValue(segmentIndex, 0),     // Value
-		std::abs(getDeterministicValue(segmentIndex, 100)) * 0.45f }; // Tension
+	// 1. Get Values and Tensions
+	float y0 = getDeterministicValue(segmentIndex, 0);
+	float y3 = getDeterministicValue(segmentIndex + 1, 0);
 
-	Anchor p1 = { getDeterministicValue(segmentIndex + 1, 0), 
-		std::abs(getDeterministicValue(segmentIndex + 1, 100)) * 0.45f };
+	// 1. Get raw random values [0.0, 1.0]
+	float rawHashOut = std::abs(getDeterministicValue(segmentIndex, 100));
+	float rawHashIn  = std::abs(getDeterministicValue(segmentIndex + 1, 100));
 
-	// 3. Cubic Bezier Interpolation
+	// 2. Define your range
+	constexpr float minTension = 0.1f;
+	constexpr float maxTension = 0.45f;
+
+	// 3. Map the [0.0, 1.0] range to [0.1, 0.45]
+	float tensionOut = jmap(rawHashOut, 0.0f, 1.0f, minTension, maxTension);
+	float tensionIn  = jmap(rawHashIn,  0.0f, 1.0f, minTension, maxTension);
+
+	// 2. Adjust the weights based on tension
 	float invT = 1.0f - t;
 
-	// Simplified Cubic Bezier (where control point Y = anchor Y)
-	float val = (invT * invT * invT * p0.value) +
-		(3.0f * invT * invT * t * p0.value) +
-		(3.0f * t * t * invT * p1.value) +
-		(t * t * t * p1.value);
+	float w1 = 3.0f * (1.0f + tensionOut * 5.0f);
+	float w2 = 3.0f * (1.0f + tensionIn * 5.0f);
 
-	return val;
+	// 3. Calculate weighted Bezier
+	float term0 = invT * invT * invT;
+	float term1 = w1 * invT * invT * t;
+	float term2 = w2 * t * t * invT;
+	float term3 = t * t * t;
+
+	float totalWeight = term0 + term1 + term2 + term3;
+
+	return (term0 * y0 + term1 * y0 + term2 * y3 + term3 * y3) / totalWeight;
 }
 
 inline double BezierGenerator::getValue(double currentBeat) {

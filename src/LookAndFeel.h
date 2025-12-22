@@ -60,7 +60,7 @@ public:
 			rotaryStartAngle, angle, true);
 
 		Colour accentColor = ModernTheme::mainAccent;
-		Colour shineColor = accentColor.brighter(0.5f);
+		Colour shineColor = accentColor.brighter(0.2f + 0.5 * sliderPosProportional * sliderPosProportional);
 
 		ColourGradient shineGradient(
 			accentColor, centreX, centreY,
