@@ -11,6 +11,7 @@
 AppId={{3BC6A620-6187-4FCC-A4CC-70932B14A573}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+ArchitecturesInstallIn64BitMode=x64compatible
 ;AppVerName={#MyAppName} {#MyAppVersion}
 DefaultDirName={commoncf}\VST3\{#MyAppName}
 DisableDirPage=yes
