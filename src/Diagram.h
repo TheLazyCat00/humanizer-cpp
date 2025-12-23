@@ -73,7 +73,7 @@ public:
 
 		// 3. Draw the Path (Stroking is usually faster than filling a complex shape)
 		g.setColour(ModernTheme::mainAccent);
-		g.strokePath(graphPath, PathStrokeType(1.5f, PathStrokeType::curved, PathStrokeType::rounded));
+		g.strokePath(graphPath, PathStrokeType(2.0f, PathStrokeType::curved, PathStrokeType::rounded));
 	}
 
 	void drawOverlays(Graphics& g, Rectangle<float> bounds) {
